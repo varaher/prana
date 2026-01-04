@@ -3,8 +3,8 @@ import { createServer, type Server } from "node:http";
 import { registerChatRoutes } from "./replit_integrations/chat";
 import OpenAI from "openai";
 import { db } from "./db";
-import { chronicConditions, alternativeMedicines, userAlternativeMedicineUsage } from "@shared/schema";
-import { eq, sql, desc, and } from "drizzle-orm";
+import { chronicConditions, alternativeMedicines, userAlternativeMedicineUsage, wearableReadings, healthReports } from "@shared/schema";
+import { eq, sql, desc, and, gte, lte } from "drizzle-orm";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -258,6 +258,246 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user medicine:", error);
       res.status(500).json({ error: "Failed to delete medicine" });
+    }
+  });
+
+  app.get("/api/user/:userId/wearable-readings", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { limit = "30", period } = req.query;
+
+      let startDate: Date | undefined;
+      if (period === "day") {
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
+      } else if (period === "week") {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+      } else if (period === "month") {
+        startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 1);
+      } else if (period === "quarter") {
+        startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 3);
+      } else if (period === "year") {
+        startDate = new Date();
+        startDate.setFullYear(startDate.getFullYear() - 1);
+      }
+
+      let readings;
+      if (startDate) {
+        readings = await db
+          .select()
+          .from(wearableReadings)
+          .where(and(eq(wearableReadings.userId, userId), gte(wearableReadings.recordedAt, startDate)))
+          .orderBy(desc(wearableReadings.recordedAt))
+          .limit(parseInt(limit as string));
+      } else {
+        readings = await db
+          .select()
+          .from(wearableReadings)
+          .where(eq(wearableReadings.userId, userId))
+          .orderBy(desc(wearableReadings.recordedAt))
+          .limit(parseInt(limit as string));
+      }
+
+      res.json(readings);
+    } catch (error) {
+      console.error("Error fetching wearable readings:", error);
+      res.status(500).json({ error: "Failed to fetch wearable readings" });
+    }
+  });
+
+  app.post("/api/user/:userId/wearable-readings", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const readingData = req.body;
+
+      const [reading] = await db.insert(wearableReadings).values({
+        userId,
+        ...readingData,
+      }).returning();
+
+      res.status(201).json(reading);
+    } catch (error) {
+      console.error("Error adding wearable reading:", error);
+      res.status(500).json({ error: "Failed to add wearable reading" });
+    }
+  });
+
+  app.get("/api/user/:userId/health-reports", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { reportType } = req.query;
+
+      let reports;
+      if (reportType) {
+        reports = await db
+          .select()
+          .from(healthReports)
+          .where(and(eq(healthReports.userId, userId), eq(healthReports.reportType, reportType as string)))
+          .orderBy(desc(healthReports.createdAt))
+          .limit(10);
+      } else {
+        reports = await db
+          .select()
+          .from(healthReports)
+          .where(eq(healthReports.userId, userId))
+          .orderBy(desc(healthReports.createdAt))
+          .limit(10);
+      }
+
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching health reports:", error);
+      res.status(500).json({ error: "Failed to fetch health reports" });
+    }
+  });
+
+  app.post("/api/user/:userId/health-reports/generate", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { reportType = "daily" } = req.body;
+
+      let startDate = new Date();
+      if (reportType === "daily" || reportType === "hourly") {
+        startDate.setDate(startDate.getDate() - 1);
+      } else if (reportType === "weekly") {
+        startDate.setDate(startDate.getDate() - 7);
+      } else if (reportType === "monthly") {
+        startDate.setMonth(startDate.getMonth() - 1);
+      } else if (reportType === "quarterly") {
+        startDate.setMonth(startDate.getMonth() - 3);
+      } else if (reportType === "yearly") {
+        startDate.setFullYear(startDate.getFullYear() - 1);
+      }
+
+      const readings = await db
+        .select()
+        .from(wearableReadings)
+        .where(and(eq(wearableReadings.userId, userId), gte(wearableReadings.recordedAt, startDate)))
+        .orderBy(desc(wearableReadings.recordedAt));
+
+      if (readings.length === 0) {
+        return res.status(400).json({ error: "No wearable data found for the specified period" });
+      }
+
+      const avgHeartRate = readings.filter(r => r.heartRate).reduce((sum, r) => sum + (r.heartRate || 0), 0) / readings.filter(r => r.heartRate).length || 0;
+      const avgHRV = readings.filter(r => r.heartRateVariability).reduce((sum, r) => sum + (r.heartRateVariability || 0), 0) / readings.filter(r => r.heartRateVariability).length || 0;
+      const avgSpO2 = readings.filter(r => r.bloodOxygenSaturation).reduce((sum, r) => sum + (r.bloodOxygenSaturation || 0), 0) / readings.filter(r => r.bloodOxygenSaturation).length || 0;
+      const totalSteps = readings.reduce((sum, r) => sum + (r.steps || 0), 0);
+      const avgSleepDuration = readings.filter(r => r.sleepDuration).reduce((sum, r) => sum + (r.sleepDuration || 0), 0) / readings.filter(r => r.sleepDuration).length || 0;
+      const avgSleepQuality = readings.filter(r => r.sleepQuality).reduce((sum, r) => sum + (r.sleepQuality || 0), 0) / readings.filter(r => r.sleepQuality).length || 0;
+      const avgStressLevel = readings.filter(r => r.stressLevel).reduce((sum, r) => sum + (r.stressLevel || 0), 0) / readings.filter(r => r.stressLevel).length || 0;
+      const avgVO2Max = readings.filter(r => r.vo2Max).reduce((sum, r) => sum + (r.vo2Max || 0), 0) / readings.filter(r => r.vo2Max).length || 0;
+      const avgRecoveryScore = readings.filter(r => r.recoveryScore).reduce((sum, r) => sum + (r.recoveryScore || 0), 0) / readings.filter(r => r.recoveryScore).length || 0;
+      const avgRespiratoryRate = readings.filter(r => r.respiratoryRate).reduce((sum, r) => sum + (r.respiratoryRate || 0), 0) / readings.filter(r => r.respiratoryRate).length || 0;
+      const avgBodyTemp = readings.filter(r => r.bodyTemperature).reduce((sum, r) => sum + (r.bodyTemperature || 0), 0) / readings.filter(r => r.bodyTemperature).length || 0;
+      const avgActiveMinutes = readings.reduce((sum, r) => sum + (r.activeMinutes || 0), 0);
+      const avgCalories = readings.reduce((sum, r) => sum + (r.caloriesBurned || 0), 0);
+      const afibDetections = readings.filter(r => r.afibDetected).length;
+      const fallDetections = readings.filter(r => r.fallDetected).length;
+
+      const healthDataSummary = `
+WEARABLE HEALTH DATA ANALYSIS (${reportType} report, ${readings.length} data points)
+
+HEART & CIRCULATION:
+- Average Heart Rate: ${avgHeartRate.toFixed(1)} bpm
+- Average HRV: ${avgHRV.toFixed(1)} ms
+- Average Resting Heart Rate: ${readings.filter(r => r.restingHeartRate).length > 0 ? (readings.filter(r => r.restingHeartRate).reduce((sum, r) => sum + (r.restingHeartRate || 0), 0) / readings.filter(r => r.restingHeartRate).length).toFixed(1) : 'N/A'} bpm
+- AFib Detections: ${afibDetections}
+
+BLOOD METRICS:
+- Average SpO2: ${avgSpO2.toFixed(1)}%
+- Average Blood Pressure: ${readings.filter(r => r.bloodPressureSystolic).length > 0 ? `${(readings.filter(r => r.bloodPressureSystolic).reduce((sum, r) => sum + (r.bloodPressureSystolic || 0), 0) / readings.filter(r => r.bloodPressureSystolic).length).toFixed(0)}/${(readings.filter(r => r.bloodPressureDiastolic).reduce((sum, r) => sum + (r.bloodPressureDiastolic || 0), 0) / readings.filter(r => r.bloodPressureDiastolic).length).toFixed(0)}` : 'N/A'} mmHg
+
+BREATHING & RESPIRATION:
+- Average Respiratory Rate: ${avgRespiratoryRate.toFixed(1)} breaths/min
+
+BODY TEMPERATURE:
+- Average Body Temperature: ${avgBodyTemp > 0 ? avgBodyTemp.toFixed(1) : 'N/A'} F
+
+ACTIVITY & MOVEMENT:
+- Total Steps: ${totalSteps}
+- Total Active Minutes: ${avgActiveMinutes}
+- Total Calories Burned: ${avgCalories}
+- VO2 Max: ${avgVO2Max > 0 ? avgVO2Max.toFixed(1) : 'N/A'}
+
+SLEEP & RECOVERY:
+- Average Sleep Duration: ${(avgSleepDuration / 60).toFixed(1)} hours
+- Average Sleep Quality: ${avgSleepQuality.toFixed(0)}/100
+- Average Recovery Score: ${avgRecoveryScore.toFixed(0)}/100
+
+STRESS & NERVOUS SYSTEM:
+- Average Stress Level: ${avgStressLevel.toFixed(0)}/100
+
+SAFETY ALERTS:
+- Fall Detections: ${fallDetections}
+`;
+
+      const aiPrompt = `You are a medical AI health analyst for ErPrana, a personalized health assistant app. Analyze the following wearable device data and provide a comprehensive, personalized health report.
+
+${healthDataSummary}
+
+Please provide:
+1. SUMMARY: A brief 2-3 sentence overall health assessment
+2. KEY INSIGHTS: 3-5 specific observations about the user's health based on the data
+3. RECOMMENDATIONS: 3-5 actionable health recommendations
+4. RISK FACTORS: Any potential health concerns based on the data (if applicable)
+5. TRENDS: Notable patterns in the data (improvements or declines)
+6. SCORES: Rate each category from 0-100:
+   - Overall Health Score
+   - Heart Health Score
+   - Sleep Score
+   - Activity Score
+   - Stress Score (lower stress = higher score)
+
+Format your response as JSON with the following structure:
+{
+  "summary": "Overall health assessment...",
+  "insights": ["insight 1", "insight 2", ...],
+  "recommendations": ["recommendation 1", "recommendation 2", ...],
+  "riskFactors": ["risk 1", "risk 2", ...] or [],
+  "trends": ["trend 1", "trend 2", ...],
+  "overallScore": 75,
+  "heartHealthScore": 80,
+  "sleepScore": 70,
+  "activityScore": 65,
+  "stressScore": 60
+}
+
+Be encouraging but honest. Focus on actionable advice. If any metric is concerning (e.g., very low SpO2, AFib detection), flag it prominently.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: aiPrompt }],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 2048,
+      });
+
+      const aiAnalysis = JSON.parse(response.choices[0].message.content || "{}");
+
+      const [report] = await db.insert(healthReports).values({
+        userId,
+        reportType,
+        periodStart: startDate,
+        periodEnd: new Date(),
+        summary: aiAnalysis.summary || "Health report generated",
+        insights: aiAnalysis.insights || [],
+        recommendations: aiAnalysis.recommendations || [],
+        riskFactors: aiAnalysis.riskFactors || [],
+        trends: aiAnalysis.trends || [],
+        overallScore: aiAnalysis.overallScore || 0,
+        heartHealthScore: aiAnalysis.heartHealthScore || 0,
+        sleepScore: aiAnalysis.sleepScore || 0,
+        activityScore: aiAnalysis.activityScore || 0,
+        stressScore: aiAnalysis.stressScore || 0,
+      }).returning();
+
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error generating health report:", error);
+      res.status(500).json({ error: "Failed to generate health report" });
     }
   });
 
