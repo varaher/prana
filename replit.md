@@ -44,6 +44,7 @@ server/
 4. **Medications**: Time-based grouping, dose tracking, reminders
 5. **SOS Emergency**: Call 911, share location, emergency contacts, medical ID
 6. **User Roles**: Patient and Doctor modes with role-specific features
+7. **Alternative Medicine**: Community-based recommendations for chronic conditions with user tracking and helpfulness ratings
 
 ## Design Guidelines
 - Primary Color: Medical Blue (#2563EB)
@@ -59,6 +60,13 @@ server/
 ## API Endpoints
 - `POST /api/arya/chat` - ARYA AI chat with streaming responses
 - `POST /api/chat` - General chat (from template)
+- `GET /api/chronic-conditions` - List all chronic conditions
+- `GET /api/alternative-medicines` - List all alternative medicines
+- `GET /api/alternative-medicines/recommendations/:conditionId` - Community recommendations ranked by usage
+- `GET /api/user/:userId/alternative-medicines` - User's saved remedies
+- `POST /api/user/:userId/alternative-medicines` - Add remedy to user's regimen
+- `PATCH /api/user/:userId/alternative-medicines/:usageId` - Update helpfulness rating
+- `DELETE /api/user/:userId/alternative-medicines/:usageId` - Remove remedy from regimen
 
 ## Running the App
 - Express backend runs on port 5000
@@ -70,3 +78,4 @@ server/
 - ARYA AI integration with OpenAI streaming
 - Medication tracking with AsyncStorage
 - SOS emergency screen with medical ID
+- Alternative Medicine section with community-based recommendations and user tracking
