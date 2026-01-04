@@ -108,30 +108,40 @@ export default function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Card style={styles.healthScoreCard}>
-          <View style={styles.healthScoreHeader}>
-            <ThemedText style={styles.healthScoreTitle}>
-              Today's Health Score
-            </ThemedText>
-            <View style={[styles.trendBadge, { backgroundColor: theme.success + "20" }]}>
-              <Feather name="trending-up" size={14} color={theme.success} />
-              <ThemedText style={[styles.trendText, { color: theme.success }]}>
-                +5%
+        <Pressable onPress={() => navigation.navigate("HealthReports")}>
+          <Card style={styles.healthScoreCard}>
+            <View style={styles.healthScoreHeader}>
+              <ThemedText style={styles.healthScoreTitle}>
+                Today's Health Score
+              </ThemedText>
+              <View style={[styles.trendBadge, { backgroundColor: theme.success + "20" }]}>
+                <Feather name="trending-up" size={14} color={theme.success} />
+                <ThemedText style={[styles.trendText, { color: theme.success }]}>
+                  +5%
+                </ThemedText>
+              </View>
+            </View>
+            <View style={styles.healthScoreValue}>
+              <ThemedText style={[styles.scoreNumber, { color: theme.success }]}>
+                85
+              </ThemedText>
+              <ThemedText style={[styles.scoreMax, { color: theme.textSecondary }]}>
+                /100
               </ThemedText>
             </View>
-          </View>
-          <View style={styles.healthScoreValue}>
-            <ThemedText style={[styles.scoreNumber, { color: theme.success }]}>
-              85
-            </ThemedText>
-            <ThemedText style={[styles.scoreMax, { color: theme.textSecondary }]}>
-              /100
-            </ThemedText>
-          </View>
-          <ThemedText style={[styles.healthScoreDesc, { color: theme.textSecondary }]}>
-            Your vitals are looking great today!
-          </ThemedText>
-        </Card>
+            <View style={styles.healthScoreFooter}>
+              <ThemedText style={[styles.healthScoreDesc, { color: theme.textSecondary }]}>
+                Your vitals are looking great today!
+              </ThemedText>
+              <View style={styles.viewReportsButton}>
+                <ThemedText style={[styles.viewReportsText, { color: theme.primary }]}>
+                  View Reports
+                </ThemedText>
+                <Feather name="chevron-right" size={16} color={theme.primary} />
+              </View>
+            </View>
+          </Card>
+        </Pressable>
 
         <Card style={styles.syncCard}>
           <View style={styles.syncContent}>
@@ -331,6 +341,20 @@ const styles = StyleSheet.create({
   },
   healthScoreDesc: {
     ...Typography.small,
+    flex: 1,
+  },
+  healthScoreFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  viewReportsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  viewReportsText: {
+    ...Typography.small,
+    fontWeight: "600",
   },
   syncCard: {
     marginBottom: Spacing.xl,
