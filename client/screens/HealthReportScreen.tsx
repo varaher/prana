@@ -79,6 +79,10 @@ export default function HealthReportScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user", user?.id, "health-reports"] });
+      setSelectedReportType("daily");
+    },
+    onError: (error: Error) => {
+      console.error("Report generation failed:", error.message);
     },
   });
 

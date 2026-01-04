@@ -8,6 +8,8 @@ import AddMedicationScreen from "@/screens/AddMedicationScreen";
 import AddRecordScreen from "@/screens/AddRecordScreen";
 import HealthReportsScreen from "@/screens/HealthReportsScreen";
 import AlternativeMedicineScreen from "@/screens/AlternativeMedicineScreen";
+import WearableDataScreen from "@/screens/WearableDataScreen";
+import HealthReportScreen from "@/screens/HealthReportScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -20,6 +22,8 @@ export type RootStackParamList = {
   AddRecord: undefined;
   HealthReports: undefined;
   AlternativeMedicine: undefined;
+  WearableData: undefined;
+  HealthReport: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -91,6 +95,20 @@ export default function RootStackNavigator() {
             component={AlternativeMedicineScreen}
             options={{
               headerTitle: "Alternative Remedies",
+            }}
+          />
+          <Stack.Screen
+            name="WearableData"
+            component={WearableDataScreen}
+            options={{
+              headerTitle: "Wearable Data",
+            }}
+          />
+          <Stack.Screen
+            name="HealthReport"
+            component={HealthReportScreen}
+            options={{
+              headerTitle: "Health Reports",
             }}
           />
         </>

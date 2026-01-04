@@ -29,7 +29,9 @@ client/
     ├── AryaScreen.tsx
     ├── SOSScreen.tsx
     ├── AddMedicationScreen.tsx
-    └── AddRecordScreen.tsx
+    ├── AddRecordScreen.tsx
+    ├── WearableDataScreen.tsx
+    └── HealthReportScreen.tsx
 
 server/
 ├── routes.ts           # API endpoints including ARYA chat
@@ -45,6 +47,8 @@ server/
 5. **SOS Emergency**: Call 911, share location, emergency contacts, medical ID
 6. **User Roles**: Patient and Doctor modes with role-specific features
 7. **Alternative Medicine**: Community-based recommendations for chronic conditions with user tracking and helpfulness ratings
+8. **Wearable Device Integration**: 30+ health metrics (heart rate, HRV, SpO2, blood pressure, respiratory rate, body temperature, steps, calories, sleep metrics, stress levels, VO2 max, environmental factors)
+9. **AI Health Reports**: Personalized health analysis using GPT-4o with multiple time periods (daily, weekly, monthly, quarterly, yearly) and 5 health scores
 
 ## Design Guidelines
 - Primary Color: Medical Blue (#2563EB)
@@ -67,6 +71,10 @@ server/
 - `POST /api/user/:userId/alternative-medicines` - Add remedy to user's regimen
 - `PATCH /api/user/:userId/alternative-medicines/:usageId` - Update helpfulness rating
 - `DELETE /api/user/:userId/alternative-medicines/:usageId` - Remove remedy from regimen
+- `GET /api/user/:userId/wearable-readings` - Get wearable device readings (optional: period, limit)
+- `POST /api/user/:userId/wearable-readings` - Add new wearable reading
+- `GET /api/user/:userId/health-reports` - Get user's health reports (optional: reportType)
+- `POST /api/user/:userId/health-reports/generate` - Generate AI health report from wearable data
 
 ## Running the App
 - Express backend runs on port 5000
@@ -79,3 +87,5 @@ server/
 - Medication tracking with AsyncStorage
 - SOS emergency screen with medical ID
 - Alternative Medicine section with community-based recommendations and user tracking
+- Wearable device integration with 30+ health metrics and manual input support
+- AI Health Reports with personalized insights, recommendations, and 5 health scores

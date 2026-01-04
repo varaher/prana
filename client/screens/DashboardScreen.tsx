@@ -143,27 +143,49 @@ export default function DashboardScreen() {
           </Card>
         </Pressable>
 
-        <Card style={styles.syncCard}>
-          <View style={styles.syncContent}>
-            <View style={[styles.syncIcon, { backgroundColor: theme.warning + "20" }]}>
-              <Feather name="watch" size={24} color={theme.warning} />
+        <Pressable onPress={() => navigation.navigate("WearableData")}>
+          <Card style={styles.syncCard}>
+            <View style={styles.syncContent}>
+              <View style={[styles.syncIcon, { backgroundColor: theme.warning + "20" }]}>
+                <Feather name="watch" size={24} color={theme.warning} />
+              </View>
+              <View style={styles.syncTextContainer}>
+                <ThemedText style={styles.syncTitle}>Wearable Health Data</ThemedText>
+                <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
+                  View and sync your device metrics
+                </ThemedText>
+              </View>
             </View>
-            <View style={styles.syncTextContainer}>
-              <ThemedText style={styles.syncTitle}>Connect Your Wearable</ThemedText>
-              <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
-                Sync your health data for personalized insights
+            <View style={styles.syncFooter}>
+              <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
+                Add or view readings
               </ThemedText>
+              <Feather name="chevron-right" size={18} color={theme.primary} />
             </View>
-          </View>
-          <Pressable
-            style={({ pressed }) => [
-              styles.syncButton,
-              { backgroundColor: theme.primary, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <ThemedText style={styles.syncButtonText}>Connect</ThemedText>
-          </Pressable>
-        </Card>
+          </Card>
+        </Pressable>
+
+        <Pressable onPress={() => navigation.navigate("HealthReport")}>
+          <Card style={styles.reportCard}>
+            <View style={styles.syncContent}>
+              <View style={[styles.syncIcon, { backgroundColor: theme.primary + "20" }]}>
+                <Feather name="file-text" size={24} color={theme.primary} />
+              </View>
+              <View style={styles.syncTextContainer}>
+                <ThemedText style={styles.syncTitle}>AI Health Reports</ThemedText>
+                <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
+                  Get personalized insights from your data
+                </ThemedText>
+              </View>
+            </View>
+            <View style={styles.syncFooter}>
+              <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
+                Generate report
+              </ThemedText>
+              <Feather name="chevron-right" size={18} color={theme.primary} />
+            </View>
+          </Card>
+        </Pressable>
 
         <ThemedText style={styles.sectionTitle}>Your Vitals</ThemedText>
         <View style={styles.metricsGrid}>
@@ -416,6 +438,19 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     ...Typography.body,
     fontWeight: "600",
+  },
+  syncFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  syncFooterText: {
+    ...Typography.small,
+    fontWeight: "600",
+  },
+  reportCard: {
+    marginBottom: Spacing.xl,
+    padding: Spacing.lg,
   },
   sectionTitle: {
     ...Typography.h4,
