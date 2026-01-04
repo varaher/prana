@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, timestamp, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -47,3 +47,43 @@ export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export const chronicConditions = pgTable("chronic_conditions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  category: text("category").notNull(),
+  description: text("description"),
+});
+
+export const alternativeMedicines = pgTable("alternative_medicines", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  type: text("type").notNull(),
+  description: text("description"),
+});
+
+export const userAlternativeMedicineUsage = pgTable("user_alternative_medicine_usage", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  conditionId: integer("condition_id").notNull().references(() => chronicConditions.id),
+  medicineId: integer("medicine_id").notNull().references(() => alternativeMedicines.id),
+  isHelping: boolean("is_helping").default(false),
+  dosage: text("dosage"),
+  frequency: text("frequency"),
+  notes: text("notes"),
+  startedAt: timestamp("started_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => ({
+  uniqueUserConditionMedicine: uniqueIndex("unique_user_condition_medicine").on(table.userId, table.conditionId, table.medicineId),
+}));
+
+export const insertChronicConditionSchema = createInsertSchema(chronicConditions).omit({ id: true });
+export const insertAlternativeMedicineSchema = createInsertSchema(alternativeMedicines).omit({ id: true });
+export const insertUserAlternativeMedicineUsageSchema = createInsertSchema(userAlternativeMedicineUsage).omit({ id: true, createdAt: true });
+
+export type ChronicCondition = typeof chronicConditions.$inferSelect;
+export type InsertChronicCondition = z.infer<typeof insertChronicConditionSchema>;
+export type AlternativeMedicine = typeof alternativeMedicines.$inferSelect;
+export type InsertAlternativeMedicine = z.infer<typeof insertAlternativeMedicineSchema>;
+export type UserAlternativeMedicineUsage = typeof userAlternativeMedicineUsage.$inferSelect;
+export type InsertUserAlternativeMedicineUsage = z.infer<typeof insertUserAlternativeMedicineUsageSchema>;
