@@ -7,6 +7,7 @@ import LoginScreen from "@/screens/LoginScreen";
 import AddMedicationScreen from "@/screens/AddMedicationScreen";
 import AddRecordScreen from "@/screens/AddRecordScreen";
 import HealthReportsScreen from "@/screens/HealthReportsScreen";
+import AlternativeMedicineScreen from "@/screens/AlternativeMedicineScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   AddMedication: { medicationId?: string } | undefined;
   AddRecord: undefined;
   HealthReports: undefined;
+  AlternativeMedicine: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -82,6 +84,13 @@ export default function RootStackNavigator() {
             component={HealthReportsScreen}
             options={{
               headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="AlternativeMedicine"
+            component={AlternativeMedicineScreen}
+            options={{
+              headerTitle: "Alternative Remedies",
             }}
           />
         </>

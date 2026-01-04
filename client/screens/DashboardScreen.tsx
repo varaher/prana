@@ -251,6 +251,28 @@ export default function DashboardScreen() {
             <Feather name="arrow-right" size={16} color={theme.primary} />
           </Pressable>
         </Card>
+
+        <Pressable onPress={() => navigation.navigate("AlternativeMedicine")}>
+          <Card style={styles.alternativeCard}>
+            <View style={styles.alternativeContent}>
+              <View style={[styles.alternativeIcon, { backgroundColor: Colors.light.success + "20" }]}>
+                <Feather name="sun" size={24} color={Colors.light.success} />
+              </View>
+              <View style={styles.alternativeTextContainer}>
+                <ThemedText style={styles.alternativeTitle}>Alternative Remedies</ThemedText>
+                <ThemedText style={[styles.alternativeDesc, { color: theme.textSecondary }]}>
+                  Explore natural treatments used by others
+                </ThemedText>
+              </View>
+            </View>
+            <View style={styles.alternativeFooter}>
+              <ThemedText style={[styles.alternativeHighlight, { color: theme.success }]}>
+                Community-ranked recommendations
+              </ThemedText>
+              <Feather name="chevron-right" size={18} color={theme.primary} />
+            </View>
+          </Card>
+        </Pressable>
       </ScrollView>
     </ThemedView>
   );
@@ -491,5 +513,42 @@ const styles = StyleSheet.create({
   insightButtonText: {
     ...Typography.body,
     fontWeight: "600",
+  },
+  alternativeCard: {
+    marginBottom: Spacing.xl,
+    padding: Spacing.lg,
+  },
+  alternativeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  alternativeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.md,
+  },
+  alternativeTextContainer: {
+    flex: 1,
+  },
+  alternativeTitle: {
+    ...Typography.body,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  alternativeDesc: {
+    ...Typography.small,
+  },
+  alternativeFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  alternativeHighlight: {
+    ...Typography.small,
+    fontWeight: "500",
   },
 });

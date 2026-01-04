@@ -11,8 +11,54 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+async function seedAlternativeMedicineData() {
+  try {
+    const existingConditions = await db.select().from(chronicConditions).limit(1);
+    if (existingConditions.length > 0) {
+      return;
+    }
+
+    await db.insert(chronicConditions).values([
+      { name: "Diabetes Type 2", category: "Metabolic", description: "Chronic condition affecting blood sugar regulation" },
+      { name: "Hypertension", category: "Cardiovascular", description: "Chronic high blood pressure" },
+      { name: "Arthritis", category: "Musculoskeletal", description: "Joint inflammation and pain" },
+      { name: "Asthma", category: "Respiratory", description: "Chronic respiratory condition" },
+      { name: "Migraine", category: "Neurological", description: "Recurring severe headaches" },
+      { name: "Chronic Pain", category: "Pain Management", description: "Persistent pain lasting over 3 months" },
+      { name: "Anxiety", category: "Mental Health", description: "Persistent anxiety disorder" },
+      { name: "Depression", category: "Mental Health", description: "Major depressive disorder" },
+      { name: "Insomnia", category: "Sleep", description: "Chronic difficulty sleeping" },
+      { name: "IBS", category: "Digestive", description: "Irritable bowel syndrome" },
+    ]);
+
+    await db.insert(alternativeMedicines).values([
+      { name: "Turmeric (Curcumin)", type: "Herbal", description: "Anti-inflammatory spice extract" },
+      { name: "Ashwagandha", type: "Ayurvedic", description: "Adaptogenic herb for stress and vitality" },
+      { name: "Cinnamon", type: "Herbal", description: "Helps regulate blood sugar levels" },
+      { name: "Omega-3 Fish Oil", type: "Supplement", description: "Essential fatty acids for heart and brain health" },
+      { name: "Ginger", type: "Herbal", description: "Anti-nausea and anti-inflammatory" },
+      { name: "Magnesium", type: "Supplement", description: "Essential mineral for muscle and nerve function" },
+      { name: "Probiotics", type: "Supplement", description: "Beneficial gut bacteria" },
+      { name: "Valerian Root", type: "Herbal", description: "Natural sleep aid" },
+      { name: "CBD Oil", type: "Cannabinoid", description: "Non-psychoactive cannabis extract for pain and anxiety" },
+      { name: "Acupuncture", type: "Traditional Medicine", description: "Chinese medicine needle therapy" },
+      { name: "Yoga", type: "Mind-Body", description: "Physical and mental practice for wellness" },
+      { name: "Meditation", type: "Mind-Body", description: "Mental practice for stress reduction" },
+      { name: "Glucosamine", type: "Supplement", description: "Joint health supplement" },
+      { name: "Feverfew", type: "Herbal", description: "Traditional migraine prevention herb" },
+      { name: "Berberine", type: "Herbal", description: "Plant compound for blood sugar and cholesterol" },
+    ]);
+
+    console.log("Alternative medicine data seeded successfully");
+  } catch (error) {
+    console.error("Error seeding alternative medicine data:", error);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   registerChatRoutes(app);
+
+  await seedAlternativeMedicineData();
 
   app.post("/api/arya/chat", async (req: Request, res: Response) => {
     try {
@@ -212,51 +258,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user medicine:", error);
       res.status(500).json({ error: "Failed to delete medicine" });
-    }
-  });
-
-  app.post("/api/seed-alternative-medicine-data", async (_req: Request, res: Response) => {
-    try {
-      const existingConditions = await db.select().from(chronicConditions).limit(1);
-      if (existingConditions.length > 0) {
-        return res.json({ message: "Data already seeded" });
-      }
-
-      await db.insert(chronicConditions).values([
-        { name: "Diabetes Type 2", category: "Metabolic", description: "Chronic condition affecting blood sugar regulation" },
-        { name: "Hypertension", category: "Cardiovascular", description: "Chronic high blood pressure" },
-        { name: "Arthritis", category: "Musculoskeletal", description: "Joint inflammation and pain" },
-        { name: "Asthma", category: "Respiratory", description: "Chronic respiratory condition" },
-        { name: "Migraine", category: "Neurological", description: "Recurring severe headaches" },
-        { name: "Chronic Pain", category: "Pain Management", description: "Persistent pain lasting over 3 months" },
-        { name: "Anxiety", category: "Mental Health", description: "Persistent anxiety disorder" },
-        { name: "Depression", category: "Mental Health", description: "Major depressive disorder" },
-        { name: "Insomnia", category: "Sleep", description: "Chronic difficulty sleeping" },
-        { name: "IBS", category: "Digestive", description: "Irritable bowel syndrome" },
-      ]);
-
-      await db.insert(alternativeMedicines).values([
-        { name: "Turmeric (Curcumin)", type: "Herbal", description: "Anti-inflammatory spice extract" },
-        { name: "Ashwagandha", type: "Ayurvedic", description: "Adaptogenic herb for stress and vitality" },
-        { name: "Cinnamon", type: "Herbal", description: "Helps regulate blood sugar levels" },
-        { name: "Omega-3 Fish Oil", type: "Supplement", description: "Essential fatty acids for heart and brain health" },
-        { name: "Ginger", type: "Herbal", description: "Anti-nausea and anti-inflammatory" },
-        { name: "Magnesium", type: "Supplement", description: "Essential mineral for muscle and nerve function" },
-        { name: "Probiotics", type: "Supplement", description: "Beneficial gut bacteria" },
-        { name: "Valerian Root", type: "Herbal", description: "Natural sleep aid" },
-        { name: "CBD Oil", type: "Cannabinoid", description: "Non-psychoactive cannabis extract for pain and anxiety" },
-        { name: "Acupuncture", type: "Traditional Medicine", description: "Chinese medicine needle therapy" },
-        { name: "Yoga", type: "Mind-Body", description: "Physical and mental practice for wellness" },
-        { name: "Meditation", type: "Mind-Body", description: "Mental practice for stress reduction" },
-        { name: "Glucosamine", type: "Supplement", description: "Joint health supplement" },
-        { name: "Feverfew", type: "Herbal", description: "Traditional migraine prevention herb" },
-        { name: "Berberine", type: "Herbal", description: "Plant compound for blood sugar and cholesterol" },
-      ]);
-
-      res.json({ message: "Data seeded successfully" });
-    } catch (error) {
-      console.error("Error seeding data:", error);
-      res.status(500).json({ error: "Failed to seed data" });
     }
   });
 

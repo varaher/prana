@@ -1,0 +1,146 @@
+Here’s a comprehensive list of what wearable devices capture, organized from basic to advanced:
+
+🧠 Core Physiological Parameters
+
+These are the fundamentals most wearables today can measure:
+
+✅ Heart & Circulation
+
+Heart Rate (HR) – beats per minute
+
+Heart Rate Variability (HRV) – beat-to-beat variation
+
+Resting Heart Rate
+
+Pulse Wave Velocity / Vascular Age (on some advanced devices)
+
+✅ Activity & Movement
+
+Step count
+
+Distance traveled
+
+Calories burned
+
+Active minutes / activity intensity
+
+Posture & movement patterns
+
+✅ Sleep & Recovery
+
+Total sleep duration
+
+Sleep stages (light, deep, REM)
+
+Sleep quality score
+
+Sleep latency / wake after sleep onset
+
+✅ Breathing & Respiration
+
+Respiratory Rate (RR) – breaths per minute
+
+Breathing patterns (periodic breathing detection)
+
+❤️ Advanced Health & Medical Parameters
+🩺 Cardiac & Rhythm
+
+ECG (Electrocardiogram) – single-lead cardiac rhythm
+
+Atrial Fibrillation (AFib) detection
+
+Arrhythmia alerts
+
+🧪 Blood Metrics
+
+SpO₂ (Oxygen Saturation) – percentage of oxygen in blood
+
+Pulse oximetry trend analysis
+
+Estimated Blood Pressure (in some devices / algorithms)
+
+🧠 Nervous System & Stress
+
+Stress / Autonomic balance metrics via HRV patterns
+
+Mindfulness / guided breathing suggestions
+
+🧬 Metabolic / Body Metrics
+
+Continuous skin temperature
+
+Core or estimated body temperature spikes
+
+VO₂ Max – cardiorespiratory fitness estimate
+
+Energy expenditure (EPOC / exercise)
+
+📊 Contextual & Behavioral Parameters
+
+These help infer health or lifestyle patterns:
+
+Sedentary alerts
+
+Caffeine / water intake logging (paired app)
+
+Menstrual cycle tracking (female health)
+
+Skin conductance / electrodermal activity (stress, arousal)
+
+🌍 Environmental Parameters
+
+Some wearables include external sensors:
+
+Ambient temperature
+
+Barometric pressure
+
+UV exposure
+
+Altitude / elevation gain
+
+Air quality index (AQI)
+
+Noise / loud sound alerts
+
+🔄 Smart & Contextual Metrics (Latest Updates)
+🆕 AI-Driven & Predictive Metrics
+
+Modern wearables are using ML/AI to generate:
+
+Early illness detection (based on combined metrics like elevated HR, skin temp, disrupted sleep)
+
+Respiratory irregularity alerts (possible COVID-like patterns)
+
+Personal fitness age / training effect modeling
+
+Recovery score (sleep + HRV + activity)
+
+Stress resilience trends
+
+🆕 Continuous BP Estimation
+
+Some recent devices estimate blood pressure trends without a cuff using pulse transit time + machine learning.
+
+🆕 Blood Glucose Prediction (Experimental)
+
+Wearables are being tested to predict glucose trends using multisensor fusion (not FDA-approved widely yet), but some consumer devices give “glucose trend insights.”
+
+🆕 Fall Detection & Emergency Alerts
+
+Fall detection (accelerometer + gyroscope fusion)
+
+SOS / crash detection alerts
+
+Share live data with emergency contacts
+
+📌 Typical Sensors That Enable These
+Sensor	Primary Use
+PPG (Optical LED)	Heart rate, SpO₂, HRV
+Accelerometer	Steps, activity, fall detection
+Gyroscope	Motion, orientation
+ECG electrodes	Real cardiac rhythm
+Temperature sensor	Skin/core temp trends
+Barometer	Altitude, elevation
+Ambient light	Sleep & screen control
+GPS	Distance, route, speed
