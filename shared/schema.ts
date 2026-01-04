@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, integer, timestamp, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, timestamp, boolean, uniqueIndex, real, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -87,3 +87,70 @@ export type AlternativeMedicine = typeof alternativeMedicines.$inferSelect;
 export type InsertAlternativeMedicine = z.infer<typeof insertAlternativeMedicineSchema>;
 export type UserAlternativeMedicineUsage = typeof userAlternativeMedicineUsage.$inferSelect;
 export type InsertUserAlternativeMedicineUsage = z.infer<typeof insertUserAlternativeMedicineUsageSchema>;
+
+export const wearableReadings = pgTable("wearable_readings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  recordedAt: timestamp("recorded_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  heartRate: integer("heart_rate"),
+  heartRateVariability: integer("heart_rate_variability"),
+  restingHeartRate: integer("resting_heart_rate"),
+  bloodOxygenSaturation: real("blood_oxygen_saturation"),
+  bloodPressureSystolic: integer("blood_pressure_systolic"),
+  bloodPressureDiastolic: integer("blood_pressure_diastolic"),
+  respiratoryRate: integer("respiratory_rate"),
+  bodyTemperature: real("body_temperature"),
+  skinTemperature: real("skin_temperature"),
+  steps: integer("steps"),
+  distance: real("distance"),
+  caloriesBurned: integer("calories_burned"),
+  activeMinutes: integer("active_minutes"),
+  flightsClimbed: integer("flights_climbed"),
+  sleepDuration: integer("sleep_duration"),
+  sleepQuality: integer("sleep_quality"),
+  deepSleep: integer("deep_sleep"),
+  lightSleep: integer("light_sleep"),
+  remSleep: integer("rem_sleep"),
+  sleepLatency: integer("sleep_latency"),
+  stressLevel: integer("stress_level"),
+  vo2Max: real("vo2_max"),
+  recoveryScore: integer("recovery_score"),
+  ambientTemperature: real("ambient_temperature"),
+  humidity: real("humidity"),
+  uvExposure: real("uv_exposure"),
+  altitude: real("altitude"),
+  noiseLevel: real("noise_level"),
+  ecgReading: text("ecg_reading"),
+  afibDetected: boolean("afib_detected"),
+  fallDetected: boolean("fall_detected"),
+  notes: text("notes"),
+  deviceType: text("device_type"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const healthReports = pgTable("health_reports", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  reportType: text("report_type").notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  summary: text("summary").notNull(),
+  insights: jsonb("insights"),
+  recommendations: jsonb("recommendations"),
+  riskFactors: jsonb("risk_factors"),
+  trends: jsonb("trends"),
+  overallScore: integer("overall_score"),
+  heartHealthScore: integer("heart_health_score"),
+  sleepScore: integer("sleep_score"),
+  activityScore: integer("activity_score"),
+  stressScore: integer("stress_score"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertWearableReadingSchema = createInsertSchema(wearableReadings).omit({ id: true, createdAt: true });
+export const insertHealthReportSchema = createInsertSchema(healthReports).omit({ id: true, createdAt: true });
+
+export type WearableReading = typeof wearableReadings.$inferSelect;
+export type InsertWearableReading = z.infer<typeof insertWearableReadingSchema>;
+export type HealthReport = typeof healthReports.$inferSelect;
+export type InsertHealthReport = z.infer<typeof insertHealthReportSchema>;
