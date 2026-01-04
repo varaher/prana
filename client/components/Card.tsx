@@ -102,8 +102,10 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.xl,
-    borderRadius: BorderRadius["2xl"],
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
   },
   cardTitle: {
     marginBottom: Spacing.sm,
