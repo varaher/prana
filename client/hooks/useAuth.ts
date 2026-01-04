@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AUTH_KEY = "@erprana_auth";
@@ -29,7 +29,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function useAuth(): AuthContextType {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -93,7 +93,7 @@ export function useAuth(): AuthContextType {
     }
   }, [user]);
 
-  return {
+  const value = {
     isAuthenticated,
     isLoading,
     user,
@@ -102,4 +102,14 @@ export function useAuth(): AuthContextType {
     logout,
     updateUser,
   };
+
+  return React.createElement(AuthContext.Provider, { value }, children);
+}
+
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
