@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import { registerChatRoutes } from "./replit_integrations/chat";
 import OpenAI from "openai";
 import { db } from "./db";
-import { chronicConditions, alternativeMedicines, userAlternativeMedicineUsage, wearableReadings, healthReports } from "@shared/schema";
+import { chronicConditions, alternativeMedicines, userAlternativeMedicineUsage, wearableReadings, healthReports, visualAssessments } from "@shared/schema";
 import { eq, sql, desc, and, gte, lte } from "drizzle-orm";
 
 const openai = new OpenAI({
@@ -498,6 +498,170 @@ Be encouraging but honest. Focus on actionable advice. If any metric is concerni
     } catch (error) {
       console.error("Error generating health report:", error);
       res.status(500).json({ error: "Failed to generate health report" });
+    }
+  });
+
+  // Visual Assessment endpoints
+  app.post("/api/user/:userId/visual-assessments/analyze", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { imageBase64 } = req.body;
+
+      if (!imageBase64) {
+        return res.status(400).json({ error: "Image data is required" });
+      }
+
+      const visionPrompt = `You are a medical AI visual assessment assistant for ErPrana health app. Analyze this image of a patient and provide a comprehensive visual assessment.
+
+Please analyze the following aspects:
+
+1. CONSCIOUSNESS LEVEL: Assess the patient's apparent consciousness state (alert, drowsy, lethargic, unresponsive, cannot determine)
+
+2. FACIAL EXPRESSION / PAIN INDICATORS: Analyze facial expression for:
+   - Pain signs (grimacing, furrowed brow, clenched jaw)
+   - Emotional state (calm, anxious, distressed, agitated)
+   - Discomfort level (none, mild, moderate, severe)
+
+3. SKIN CONDITION: Assess visible skin for:
+   - Color (normal, pale, flushed, cyanotic/blue, jaundiced/yellow)
+   - Moisture (dry, normal, diaphoretic/sweaty)
+   - Any visible rashes, lesions, or abnormalities
+
+4. BODY POSITION: Describe:
+   - Current position (sitting, lying, standing)
+   - Posture (relaxed, guarding, rigid, asymmetric)
+   - Any visible limb positioning concerns
+
+5. VISIBLE INJURIES: Identify any visible:
+   - Bleeding, bruising, swelling
+   - Wounds, cuts, abrasions
+   - Burns or trauma signs
+   - Location and apparent severity
+
+6. ENVIRONMENT NOTES: Describe relevant environmental factors if visible:
+   - Medical equipment present
+   - Setting (home, medical facility, outdoor)
+   - Any safety concerns
+
+7. INTERVENTIONS DETECTED: Note any visible medical interventions:
+   - IV lines, oxygen equipment
+   - Bandages, splints, braces
+   - Monitoring devices
+
+8. OVERALL ASSESSMENT: Provide a summary of findings
+
+9. URGENCY LEVEL: Rate the apparent urgency (routine, concerning, urgent, emergency)
+
+10. RECOMMENDATIONS: List 2-3 immediate recommendations
+
+Format your response as JSON:
+{
+  "consciousnessLevel": "alert/drowsy/lethargic/unresponsive/cannot_determine",
+  "painIndicators": {
+    "painSigns": ["list of observed pain signs"],
+    "emotionalState": "calm/anxious/distressed/agitated",
+    "discomfortLevel": "none/mild/moderate/severe"
+  },
+  "facialExpression": "description of facial expression",
+  "skinCondition": "description of skin condition",
+  "bodyPosition": "description of body position",
+  "visibleInjuries": ["list of observed injuries with locations"],
+  "environmentNotes": "description of environment",
+  "interventionsDetected": ["list of medical interventions observed"],
+  "overallAssessment": "comprehensive summary",
+  "urgencyLevel": "routine/concerning/urgent/emergency",
+  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3"]
+}
+
+If you cannot determine certain aspects from the image, indicate "cannot determine" or "not visible" for those fields.
+Be thorough but avoid making assumptions beyond what is clearly visible.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: visionPrompt },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageBase64.startsWith("data:") ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`,
+                  detail: "high",
+                },
+              },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 2048,
+      });
+
+      const analysis = JSON.parse(response.choices[0].message.content || "{}");
+
+      const [assessment] = await db.insert(visualAssessments).values({
+        userId,
+        imageBase64: imageBase64.substring(0, 100) + "...", // Store truncated for reference
+        consciousnessLevel: analysis.consciousnessLevel,
+        painIndicators: analysis.painIndicators,
+        facialExpression: analysis.facialExpression,
+        skinCondition: analysis.skinCondition,
+        bodyPosition: analysis.bodyPosition,
+        visibleInjuries: analysis.visibleInjuries,
+        environmentNotes: analysis.environmentNotes,
+        interventionsDetected: analysis.interventionsDetected,
+        overallAssessment: analysis.overallAssessment,
+        urgencyLevel: analysis.urgencyLevel,
+        recommendations: analysis.recommendations,
+        rawAnalysis: response.choices[0].message.content,
+      }).returning();
+
+      res.status(201).json({
+        ...assessment,
+        analysis,
+      });
+    } catch (error) {
+      console.error("Error analyzing visual assessment:", error);
+      res.status(500).json({ error: "Failed to analyze image" });
+    }
+  });
+
+  app.get("/api/user/:userId/visual-assessments", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { limit = "20" } = req.query;
+
+      const assessments = await db
+        .select()
+        .from(visualAssessments)
+        .where(eq(visualAssessments.userId, userId))
+        .orderBy(desc(visualAssessments.createdAt))
+        .limit(parseInt(limit as string));
+
+      res.json(assessments);
+    } catch (error) {
+      console.error("Error fetching visual assessments:", error);
+      res.status(500).json({ error: "Failed to fetch assessments" });
+    }
+  });
+
+  app.get("/api/user/:userId/visual-assessments/:assessmentId", async (req: Request, res: Response) => {
+    try {
+      const { assessmentId } = req.params;
+
+      const [assessment] = await db
+        .select()
+        .from(visualAssessments)
+        .where(eq(visualAssessments.id, parseInt(assessmentId)));
+
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error fetching visual assessment:", error);
+      res.status(500).json({ error: "Failed to fetch assessment" });
     }
   });
 

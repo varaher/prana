@@ -154,3 +154,27 @@ export type WearableReading = typeof wearableReadings.$inferSelect;
 export type InsertWearableReading = z.infer<typeof insertWearableReadingSchema>;
 export type HealthReport = typeof healthReports.$inferSelect;
 export type InsertHealthReport = z.infer<typeof insertHealthReportSchema>;
+
+export const visualAssessments = pgTable("visual_assessments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  imageBase64: text("image_base64"),
+  consciousnessLevel: text("consciousness_level"),
+  painIndicators: jsonb("pain_indicators"),
+  facialExpression: text("facial_expression"),
+  skinCondition: text("skin_condition"),
+  bodyPosition: text("body_position"),
+  visibleInjuries: jsonb("visible_injuries"),
+  environmentNotes: text("environment_notes"),
+  interventionsDetected: jsonb("interventions_detected"),
+  overallAssessment: text("overall_assessment"),
+  urgencyLevel: text("urgency_level"),
+  recommendations: jsonb("recommendations"),
+  rawAnalysis: text("raw_analysis"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertVisualAssessmentSchema = createInsertSchema(visualAssessments).omit({ id: true, createdAt: true });
+
+export type VisualAssessment = typeof visualAssessments.$inferSelect;
+export type InsertVisualAssessment = z.infer<typeof insertVisualAssessmentSchema>;
