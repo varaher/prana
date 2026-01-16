@@ -187,6 +187,28 @@ export default function DashboardScreen() {
           </Card>
         </Pressable>
 
+        <Pressable onPress={() => navigation.navigate("VisualAssessment")}>
+          <Card style={styles.reportCard}>
+            <View style={styles.syncContent}>
+              <View style={[styles.syncIcon, { backgroundColor: theme.danger + "20" }]}>
+                <Feather name="camera" size={24} color={theme.danger} />
+              </View>
+              <View style={styles.syncTextContainer}>
+                <ThemedText style={styles.syncTitle}>Visual Assessment</ThemedText>
+                <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
+                  AI-powered patient visual analysis
+                </ThemedText>
+              </View>
+            </View>
+            <View style={styles.syncFooter}>
+              <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
+                Take photo for analysis
+              </ThemedText>
+              <Feather name="chevron-right" size={18} color={theme.primary} />
+            </View>
+          </Card>
+        </Pressable>
+
         <ThemedText style={styles.sectionTitle}>Your Vitals</ThemedText>
         <View style={styles.metricsGrid}>
           <MetricCard
