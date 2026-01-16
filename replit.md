@@ -31,7 +31,8 @@ client/
     ├── AddMedicationScreen.tsx
     ├── AddRecordScreen.tsx
     ├── WearableDataScreen.tsx
-    └── HealthReportScreen.tsx
+    ├── HealthReportScreen.tsx
+    └── VisualAssessmentScreen.tsx
 
 server/
 ├── routes.ts           # API endpoints including ARYA chat
@@ -49,6 +50,7 @@ server/
 7. **Alternative Medicine**: Community-based recommendations for chronic conditions with user tracking and helpfulness ratings
 8. **Wearable Device Integration**: 30+ health metrics (heart rate, HRV, SpO2, blood pressure, respiratory rate, body temperature, steps, calories, sleep metrics, stress levels, VO2 max, environmental factors)
 9. **AI Health Reports**: Personalized health analysis using GPT-4o with multiple time periods (daily, weekly, monthly, quarterly, yearly) and 5 health scores
+10. **Visual Patient Assessment**: AI-powered camera-based patient analysis using OpenAI Vision (GPT-4o) to detect consciousness levels, pain indicators, facial expressions, skin conditions, visible injuries, body position, medical interventions, and urgency levels with structured assessment reports
 
 ## Design Guidelines
 - Primary Color: Medical Blue (#2563EB)
@@ -75,6 +77,8 @@ server/
 - `POST /api/user/:userId/wearable-readings` - Add new wearable reading
 - `GET /api/user/:userId/health-reports` - Get user's health reports (optional: reportType)
 - `POST /api/user/:userId/health-reports/generate` - Generate AI health report from wearable data
+- `GET /api/user/:userId/visual-assessments` - Get user's visual assessment history
+- `POST /api/user/:userId/visual-assessments/analyze` - Analyze patient image with AI Vision
 
 ## Running the App
 - Express backend runs on port 5000
@@ -89,3 +93,4 @@ server/
 - Alternative Medicine section with community-based recommendations and user tracking
 - Wearable device integration with 30+ health metrics and manual input support
 - AI Health Reports with personalized insights, recommendations, and 5 health scores
+- Visual Patient Assessment with AI-powered camera analysis for consciousness, injuries, pain indicators, and urgency levels
