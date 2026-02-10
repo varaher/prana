@@ -1,13 +1,35 @@
 # ErPrana - Personal Health Assistant
 
 ## Overview
-ErPrana is a personalized health assistant mobile app featuring ARYA (AI-powered symptom checker), daily health monitoring, medication management, health records tracking, and emergency SOS features. The app supports two user modes: Layperson (Patient) and Doctor.
+ErPrana is a personalized health assistant mobile app for **normal users (patients/laypersons)**. It features ARYA (AI-powered symptom checker with multilingual support), daily health monitoring, medication management, health records tracking, and emergency SOS features. The app supports two user modes: Layperson (Patient) and Doctor.
+
+## Parent Ecosystem & Future Integrations
+
+### ErMate (Sibling Product)
+- **ErMate** is a separate app built for **hospital emergency department doctors**.
+- ErPrana (this app) generates patient health data that should be **useful and compatible with ErMate** in the future.
+- Future goal: **Interconnectivity between ErPrana and ErMate** so that patient data from ErPrana (health records, vitals, wearable data, medications, AI assessments) can be shared with or accessed by emergency doctors using ErMate.
+- When designing data schemas and APIs, keep ErMate compatibility in mind - data should be structured in a way that is medically useful and transferable.
+
+### ARYA (Parent Company AI System)
+- **ARYA** is the parent company's AI assistant system (comparable to Alexa, Gemini, or OpenAI assistants).
+- ARYA is currently **under production** as a standalone system.
+- In the future, the standalone ARYA system will be **integrated into ErPrana** for a deeper, more capable AI experience.
+- The current in-app ARYA (health chat assistant powered by Sarvam AI) is an early implementation; the full ARYA system will replace/enhance it once ready.
+
+### Design Principles for Future Integration
+- Keep APIs RESTful and well-documented for cross-product communication
+- Use standardized medical data formats where possible
+- Patient data should be exportable/shareable in structured formats
+- Authentication should eventually support cross-product SSO
+- Health records, assessments, and reports should be designed with hospital-grade data needs in mind
 
 ## Tech Stack
 - **Frontend**: React Native with Expo
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
-- **AI**: OpenAI GPT-4o via Replit AI Integrations
+- **AI (ARYA Chat)**: Sarvam AI (sarvam-m model) for multilingual health conversations
+- **AI (Vision & Reports)**: OpenAI GPT-4o via Replit AI Integrations
 - **State Management**: React Query + AsyncStorage
 
 ## Project Structure
@@ -87,10 +109,11 @@ server/
 
 ## Recent Changes
 - Initial app setup with full navigation structure
-- ARYA AI integration with OpenAI streaming
+- ARYA AI integration with Sarvam AI (sarvam-m model) for multilingual health conversations
 - Medication tracking with AsyncStorage
 - SOS emergency screen with medical ID
 - Alternative Medicine section with community-based recommendations and user tracking
 - Wearable device integration with 30+ health metrics and manual input support
 - AI Health Reports with personalized insights, recommendations, and 5 health scores
 - Visual Patient Assessment with AI-powered camera analysis for consciousness, injuries, pain indicators, and urgency levels
+- ARYA tab button redesigned with chat icon and label for clarity
