@@ -2,7 +2,7 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { Platform, StyleSheet, View, Pressable } from "react-native";
+import { Platform, StyleSheet, View, Pressable, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import DashboardScreen from "@/screens/DashboardScreen";
@@ -28,20 +28,21 @@ function AryaPlaceholderScreen() {
 }
 
 function AryaTabButton({ onPress }: { onPress: () => void }) {
-  const { isDark } = useTheme();
-  
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.aryaButton,
         {
-          backgroundColor: Colors.light.primary,
-          transform: [{ scale: pressed ? 0.95 : 1 }],
+          transform: [{ scale: pressed ? 0.92 : 1 }],
+          opacity: pressed ? 0.9 : 1,
         },
       ]}
     >
-      <Feather name="activity" size={24} color="#FFFFFF" />
+      <View style={styles.aryaButtonInner}>
+        <Feather name="message-circle" size={22} color="#FFFFFF" />
+        <Text style={styles.aryaLabel}>ARYA</Text>
+      </View>
     </Pressable>
   );
 }
@@ -83,16 +84,6 @@ export default function MainTabNavigator() {
       }}
     >
       <Tab.Screen
-        name="AryaPlaceholder"
-        component={AryaPlaceholderScreen}
-        options={{
-          title: "",
-          tabBarButton: () => (
-            <AryaTabButton onPress={() => navigation.navigate("Arya")} />
-          ),
-        }}
-      />
-      <Tab.Screen
         name="DashboardTab"
         component={DashboardScreen}
         options={{
@@ -109,6 +100,16 @@ export default function MainTabNavigator() {
           title: "Records",
           tabBarIcon: ({ color, size }) => (
             <Feather name="file-text" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AryaPlaceholder"
+        component={AryaPlaceholderScreen}
+        options={{
+          title: "",
+          tabBarButton: () => (
+            <AryaTabButton onPress={() => navigation.navigate("Arya")} />
           ),
         }}
       />
@@ -138,16 +139,28 @@ export default function MainTabNavigator() {
 
 const styles = StyleSheet.create({
   aryaButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: -20,
+    marginTop: -24,
+    backgroundColor: Colors.light.primary,
     shadowColor: "#2563EB",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  aryaButtonInner: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  aryaLabel: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 });
