@@ -83,6 +83,16 @@ export default function MainTabNavigator() {
       }}
     >
       <Tab.Screen
+        name="AryaPlaceholder"
+        component={AryaPlaceholderScreen}
+        options={{
+          title: "",
+          tabBarButton: () => (
+            <AryaTabButton onPress={() => navigation.navigate("Arya")} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="DashboardTab"
         component={DashboardScreen}
         options={{
@@ -99,16 +109,6 @@ export default function MainTabNavigator() {
           title: "Records",
           tabBarIcon: ({ color, size }) => (
             <Feather name="file-text" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="AryaPlaceholder"
-        component={AryaPlaceholderScreen}
-        options={{
-          title: "",
-          tabBarButton: () => (
-            <AryaTabButton onPress={() => navigation.navigate("Arya")} />
           ),
         }}
       />
