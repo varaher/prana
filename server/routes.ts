@@ -11,6 +11,11 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+const sarvam = new OpenAI({
+  apiKey: process.env.SARVAM_API_KEY,
+  baseURL: "https://api.sarvam.ai/v1",
+});
+
 async function seedAlternativeMedicineData() {
   try {
     const existingConditions = await db.select().from(chronicConditions).limit(1);
@@ -89,11 +94,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
       ];
 
-      const stream = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const stream = await sarvam.chat.completions.create({
+        model: "sarvam-m",
         messages: chatMessages,
         stream: true,
-        max_completion_tokens: 2048,
+        max_tokens: 2048,
+        temperature: 0.7,
       });
 
       let fullResponse = "";
@@ -109,7 +115,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lowerContent.includes("call 911") ||
             lowerContent.includes("emergency room") ||
             lowerContent.includes("seek immediate") ||
-            lowerContent.includes("life-threatening")
+            lowerContent.includes("life-threatening") ||
+            lowerContent.includes("call 112") ||
+            lowerContent.includes("call 108")
           ) {
             res.write(`data: ${JSON.stringify({ emergency: true })}\n\n`);
           }
