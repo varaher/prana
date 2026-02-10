@@ -1,0 +1,101 @@
+{
+  "id": "928d06bb-e961-4e13-ba22-9ee697de483d",
+  "createdAt": "2026-02-10T10:24:02.547Z",
+  "runtimeVersion": "exposdk:54.0.0",
+  "launchAsset": {
+    "key": "bundle-1770719042547-2395",
+    "contentType": "application/javascript",
+    "url": "https://67d01841-aae8-4a05-9992-57999857e193-00-2h2imswd3an62.picard.replit.dev/1770719042547-2395/_expo/static/js/android/bundle.js"
+  },
+  "assets": [],
+  "metadata": {},
+  "extra": {
+    "eas": {},
+    "expoClient": {
+      "name": "ErPrana",
+      "slug": "erprana",
+      "version": "1.0.0",
+      "orientation": "portrait",
+      "icon": "./assets/images/icon.png",
+      "scheme": "erprana",
+      "userInterfaceStyle": "automatic",
+      "newArchEnabled": true,
+      "ios": {
+        "supportsTablet": true,
+        "bundleIdentifier": "com.erprana.health"
+      },
+      "android": {
+        "adaptiveIcon": {
+          "backgroundColor": "#2563EB",
+          "foregroundImage": "./assets/images/icon.png",
+          "foregroundImageUrl": "https://67d01841-aae8-4a05-9992-57999857e193-00-2h2imswd3an62.picard.replit.dev/assets/./assets/images/icon.png"
+        },
+        "edgeToEdgeEnabled": true,
+        "predictiveBackGestureEnabled": false,
+        "package": "com.erprana.health"
+      },
+      "web": {
+        "output": "single",
+        "favicon": "./assets/images/favicon.png"
+      },
+      "plugins": [
+        [
+          "expo-splash-screen",
+          {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 200,
+            "resizeMode": "contain",
+            "backgroundColor": "#2563EB",
+            "dark": {
+              "backgroundColor": "#1e40af"
+            }
+          }
+        ],
+        "expo-web-browser"
+      ],
+      "experiments": {
+        "reactCompiler": true
+      },
+      "_internal": {
+        "isDebug": false,
+        "projectRoot": "/home/runner/workspace",
+        "dynamicConfigPath": {},
+        "staticConfigPath": "/home/runner/workspace/app.json",
+        "packageJsonPath": "/home/runner/workspace/package.json",
+        "pluginHistory": {
+          "expo-splash-screen": {
+            "name": "expo-splash-screen",
+            "version": "31.0.11"
+          },
+          "expo-web-browser": {
+            "name": "expo-web-browser",
+            "version": "15.0.9"
+          }
+        }
+      },
+      "sdkVersion": "54.0.0",
+      "platforms": [
+        "ios",
+        "android",
+        "web"
+      ],
+      "androidStatusBar": {
+        "backgroundColor": "#2563EB"
+      },
+      "iconUrl": "https://67d01841-aae8-4a05-9992-57999857e193-00-2h2imswd3an62.picard.replit.dev/assets/./assets/images/icon.png",
+      "hostUri": "67d01841-aae8-4a05-9992-57999857e193-00-2h2imswd3an62.picard.replit.dev/android"
+    },
+    "expoGo": {
+      "debuggerHost": "67d01841-aae8-4a05-9992-57999857e193-00-2h2imswd3an62.picard.replit.dev/android",
+      "developer": {
+        "tool": "expo-cli",
+        "projectRoot": "/home/runner/workspace"
+      },
+      "packagerOpts": {
+        "dev": false
+      },
+      "mainModuleName": "client/index"
+    },
+    "scopeKey": "@anonymous/erprana-7c5aff53-0b6e-4c0e-afa9-86a9e319edf1"
+  }
+}
