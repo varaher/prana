@@ -46,12 +46,6 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleSwitchMode = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newRole = user?.role === "doctor" ? "layperson" : "doctor";
-    updateUser({ role: newRole });
-  };
-
   const settingsSections: { title: string; items: SettingsItem[] }[] = [
     {
       title: "Devices",
@@ -95,13 +89,6 @@ export default function ProfileScreen() {
           icon: "globe",
           title: "Units & Language",
           subtitle: "Metric, Imperial, Language",
-          rightIcon: "chevron-right",
-        },
-        {
-          icon: "repeat",
-          title: "Switch Mode",
-          subtitle: `Currently: ${user?.role === "doctor" ? "Doctor" : "Patient"}`,
-          action: handleSwitchMode,
           rightIcon: "chevron-right",
         },
       ],
@@ -218,21 +205,6 @@ export default function ProfileScreen() {
           <ThemedText style={[styles.userEmail, { color: theme.textSecondary }]}>
             {user?.email || "user@example.com"}
           </ThemedText>
-          <View
-            style={[
-              styles.roleBadge,
-              { backgroundColor: theme.primary + "20" },
-            ]}
-          >
-            <Feather
-              name={user?.role === "doctor" ? "briefcase" : "user"}
-              size={14}
-              color={theme.primary}
-            />
-            <ThemedText style={[styles.roleText, { color: theme.primary }]}>
-              {user?.role === "doctor" ? "Doctor" : "Patient"}
-            </ThemedText>
-          </View>
         </Card>
 
         {settingsSections.map((section) => (
@@ -303,18 +275,6 @@ const styles = StyleSheet.create({
   userEmail: {
     ...Typography.body,
     marginBottom: Spacing.md,
-  },
-  roleBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-  },
-  roleText: {
-    ...Typography.small,
-    fontWeight: "600",
   },
   section: {
     marginBottom: Spacing.xl,

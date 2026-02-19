@@ -80,18 +80,6 @@ export default function DashboardScreen() {
           <ThemedText style={styles.greeting}>
             {getGreeting()}, {user?.name?.split(" ")[0] || "User"}
           </ThemedText>
-          <View style={styles.roleContainer}>
-            <View
-              style={[
-                styles.roleBadge,
-                { backgroundColor: theme.primary + "20" },
-              ]}
-            >
-              <ThemedText style={[styles.roleText, { color: theme.primary }]}>
-                {user?.role === "doctor" ? "Doctor" : "Patient"}
-              </ThemedText>
-            </View>
-          </View>
         </View>
         <Pressable
           style={({ pressed }) => [
@@ -370,18 +358,6 @@ const styles = StyleSheet.create({
   greeting: {
     ...Typography.h3,
     marginBottom: Spacing.xs,
-  },
-  roleContainer: {
-    flexDirection: "row",
-  },
-  roleBadge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-  },
-  roleText: {
-    ...Typography.caption,
-    fontWeight: "600",
   },
   sosButton: {
     width: 44,

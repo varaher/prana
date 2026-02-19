@@ -272,7 +272,6 @@ export default function AryaScreen() {
           userContext: user
             ? {
                 name: user.name,
-                role: user.role,
                 conditions: user.conditions,
                 allergies: user.allergies,
               }

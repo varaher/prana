@@ -77,7 +77,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (userContext) {
         enhancedSystemPrompt += `\n\nUser Context:
 - Name: ${userContext.name || "Unknown"}
-- Role: ${userContext.role || "layperson"}
 - Known conditions: ${userContext.conditions?.join(", ") || "None recorded"}
 - Known allergies: ${userContext.allergies?.join(", ") || "None recorded"}`;
       }

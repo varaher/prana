@@ -26,7 +26,6 @@ export default function LoginScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"layperson" | "doctor">("layperson");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,9 +41,9 @@ export default function LoginScreen() {
 
     try {
       if (isSignup) {
-        await signup(name, email, password, role);
+        await signup(name, email, password);
       } else {
-        await login(email, password, role);
+        await login(email, password);
       }
     } catch (err) {
       setError("Authentication failed. Please try again.");
@@ -136,50 +135,6 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry
               />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <ThemedText style={styles.label}>I am a</ThemedText>
-              <View style={styles.roleContainer}>
-                <Pressable
-                  style={[
-                    styles.roleButton,
-                    {
-                      backgroundColor: role === "layperson" ? theme.primary : theme.inputBackground,
-                      borderColor: role === "layperson" ? theme.primary : theme.border,
-                    },
-                  ]}
-                  onPress={() => setRole("layperson")}
-                >
-                  <ThemedText
-                    style={[
-                      styles.roleText,
-                      { color: role === "layperson" ? "#FFFFFF" : theme.text },
-                    ]}
-                  >
-                    Patient
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.roleButton,
-                    {
-                      backgroundColor: role === "doctor" ? theme.primary : theme.inputBackground,
-                      borderColor: role === "doctor" ? theme.primary : theme.border,
-                    },
-                  ]}
-                  onPress={() => setRole("doctor")}
-                >
-                  <ThemedText
-                    style={[
-                      styles.roleText,
-                      { color: role === "doctor" ? "#FFFFFF" : theme.text },
-                    ]}
-                  >
-                    Doctor
-                  </ThemedText>
-                </Pressable>
-              </View>
             </View>
 
             {error ? (
@@ -275,22 +230,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     fontSize: 16,
     borderWidth: 1,
-  },
-  roleContainer: {
-    flexDirection: "row",
-    gap: Spacing.md,
-  },
-  roleButton: {
-    flex: 1,
-    height: Spacing.inputHeight,
-    borderRadius: BorderRadius.sm,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  roleText: {
-    ...Typography.body,
-    fontWeight: "600",
   },
   error: {
     ...Typography.small,

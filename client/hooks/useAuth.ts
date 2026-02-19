@@ -8,7 +8,6 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: "layperson" | "doctor";
   age?: number;
   gender?: string;
   bloodType?: string;
@@ -21,8 +20,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: UserProfile | null;
-  login: (email: string, password: string, role: "layperson" | "doctor") => Promise<void>;
-  signup: (name: string, email: string, password: string, role: "layperson" | "doctor") => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<UserProfile>) => Promise<void>;
 }
@@ -53,12 +52,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = useCallback(async (email: string, password: string, role: "layperson" | "doctor") => {
+  const login = useCallback(async (email: string, password: string) => {
     const userProfile: UserProfile = {
       id: Date.now().toString(),
       name: email.split("@")[0],
       email,
-      role,
     };
     await AsyncStorage.setItem(AUTH_KEY, JSON.stringify({ email, timestamp: Date.now() }));
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(userProfile));
@@ -66,12 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true);
   }, []);
 
-  const signup = useCallback(async (name: string, email: string, password: string, role: "layperson" | "doctor") => {
+  const signup = useCallback(async (name: string, email: string, password: string) => {
     const userProfile: UserProfile = {
       id: Date.now().toString(),
       name,
       email,
-      role,
     };
     await AsyncStorage.setItem(AUTH_KEY, JSON.stringify({ email, timestamp: Date.now() }));
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(userProfile));
