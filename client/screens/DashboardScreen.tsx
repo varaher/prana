@@ -110,31 +110,30 @@ export default function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
+        <Card
+          style={styles.checkinCard}
           onPress={() => navigation.navigate("Arya", { mode: "checkin" })}
         >
-          <Card style={styles.checkinCard}>
-            <View style={styles.syncContent}>
-              <View style={[styles.checkinIconWrap, { backgroundColor: theme.primary + "15" }]}>
-                <Feather name="message-circle" size={24} color={theme.primary} />
-              </View>
-              <View style={styles.syncTextContainer}>
-                <ThemedText style={styles.syncTitle}>
-                  Daily Health Check-in
-                </ThemedText>
-                <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
-                  Let ARYA record your vitals today
-                </ThemedText>
-              </View>
+          <View style={styles.syncContent}>
+            <View style={[styles.checkinIconWrap, { backgroundColor: theme.primary + "15" }]}>
+              <Feather name="message-circle" size={24} color={theme.primary} />
             </View>
-            <View style={styles.syncFooter}>
-              <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
-                Start check-in with ARYA
+            <View style={styles.syncTextContainer}>
+              <ThemedText style={styles.syncTitle}>
+                Daily Health Check-in
               </ThemedText>
-              <Feather name="chevron-right" size={18} color={theme.primary} />
+              <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
+                Let ARYA record your vitals today
+              </ThemedText>
             </View>
-          </Card>
-        </Pressable>
+          </View>
+          <View style={styles.syncFooter}>
+            <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
+              Start check-in with ARYA
+            </ThemedText>
+            <Feather name="chevron-right" size={18} color={theme.primary} />
+          </View>
+        </Card>
 
         <Pressable onPress={() => navigation.navigate("HealthReports")}>
           <Card style={styles.healthScoreCard}>

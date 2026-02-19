@@ -56,6 +56,7 @@ export default function RootStackNavigator() {
           <Stack.Screen
             name="Arya"
             component={AryaScreen}
+            getId={({ params }) => params?.mode || "chat"}
             options={{
               presentation: "modal",
               headerShown: false,
