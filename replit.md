@@ -1,7 +1,7 @@
 # ErPrana - Personal Health Assistant
 
 ## Overview
-ErPrana is a personalized health assistant mobile app for **normal users (patients/laypersons)**. It features ARYA (AI-powered symptom checker with multilingual support), daily health monitoring, medication management, health records tracking, and emergency SOS features. The app supports two user modes: Layperson (Patient) and Doctor.
+ErPrana is a personalized health assistant mobile app for **normal users (patients/laypersons)**. It features ARYA (AI-powered symptom checker with multilingual support), daily health monitoring, medication management, health records tracking, and emergency SOS features.
 
 ## Parent Ecosystem & Future Integrations
 
@@ -68,8 +68,7 @@ server/
 3. **Health Records**: Medical history, consultations, test results, immunizations
 4. **Medications**: Time-based grouping, dose tracking, reminders
 5. **SOS Emergency**: Call 911, share location, emergency contacts, medical ID
-6. **User Roles**: Patient and Doctor modes with role-specific features
-7. **Alternative Medicine**: Community-based recommendations for chronic conditions with user tracking and helpfulness ratings
+6. **Alternative Medicine**: Community-based recommendations for chronic conditions with user tracking and helpfulness ratings
 8. **Wearable Device Integration**: 30+ health metrics (heart rate, HRV, SpO2, blood pressure, respiratory rate, body temperature, steps, calories, sleep metrics, stress levels, VO2 max, environmental factors)
 9. **AI Health Reports**: Personalized health analysis using GPT-4o with multiple time periods (daily, weekly, monthly, quarterly, yearly) and 5 health scores
 10. **Visual Patient Assessment**: AI-powered camera-based patient analysis using OpenAI Vision (GPT-4o) to detect consciousness levels, pain indicators, facial expressions, skin conditions, visible injuries, body position, medical interventions, and urgency levels with structured assessment reports
@@ -82,7 +81,7 @@ server/
 
 ## Authentication
 - Local authentication with AsyncStorage
-- Email/password with role selection (Patient/Doctor)
+- Email/password (single user mode)
 - Auth state persists across sessions
 
 ## API Endpoints
