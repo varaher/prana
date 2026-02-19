@@ -6,6 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as WebBrowser from "expo-web-browser";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Card } from "@/components/Card";
@@ -55,6 +56,7 @@ export default function ProfileScreen() {
           title: "Wearables & Devices",
           subtitle: "Connect Apple Watch, Fitbit, etc.",
           rightIcon: "chevron-right",
+          action: () => navigation.navigate("WearableData"),
         },
       ],
     },
@@ -66,12 +68,14 @@ export default function ProfileScreen() {
           title: "Emergency Contacts",
           subtitle: "Add contacts for emergencies",
           rightIcon: "chevron-right",
+          action: () => navigation.navigate("EmergencyContacts"),
         },
         {
           icon: "heart",
           title: "Medical ID",
           subtitle: "Blood type, allergies, conditions",
           rightIcon: "chevron-right",
+          action: () => navigation.navigate("MedicalID"),
         },
       ],
     },
@@ -90,6 +94,7 @@ export default function ProfileScreen() {
           title: "Units & Language",
           subtitle: "Metric, Imperial, Language",
           rightIcon: "chevron-right",
+          action: () => navigation.navigate("UnitsLanguage"),
         },
       ],
     },
@@ -101,16 +106,19 @@ export default function ProfileScreen() {
           title: "Privacy Settings",
           subtitle: "Data sharing, consent",
           rightIcon: "chevron-right",
+          action: () => navigation.navigate("PrivacySettings"),
         },
         {
           icon: "file-text",
           title: "Terms of Service",
           rightIcon: "external-link",
+          action: () => WebBrowser.openBrowserAsync("https://erprana.com/terms"),
         },
         {
           icon: "lock",
           title: "Privacy Policy",
           rightIcon: "external-link",
+          action: () => WebBrowser.openBrowserAsync("https://erprana.com/privacy"),
         },
       ],
     },
@@ -127,6 +135,20 @@ export default function ProfileScreen() {
           icon: "trash-2",
           title: "Delete Account",
           color: theme.danger,
+          action: () => {
+            Alert.alert(
+              "Delete Account",
+              "Are you sure? This will permanently remove all your health data. This action cannot be undone.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: logout,
+                },
+              ]
+            );
+          },
         },
       ],
     },

@@ -12,6 +12,10 @@ import WearableDataScreen from "@/screens/WearableDataScreen";
 import HealthReportScreen from "@/screens/HealthReportScreen";
 import VisualAssessmentScreen from "@/screens/VisualAssessmentScreen";
 import CheckinSettingsScreen from "@/screens/CheckinSettingsScreen";
+import EmergencyContactsScreen from "@/screens/EmergencyContactsScreen";
+import MedicalIDScreen from "@/screens/MedicalIDScreen";
+import UnitsLanguageScreen from "@/screens/UnitsLanguageScreen";
+import PrivacySettingsScreen from "@/screens/PrivacySettingsScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -28,6 +32,10 @@ export type RootStackParamList = {
   HealthReport: undefined;
   VisualAssessment: undefined;
   CheckinSettings: undefined;
+  EmergencyContacts: undefined;
+  MedicalID: undefined;
+  UnitsLanguage: undefined;
+  PrivacySettings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -128,6 +136,34 @@ export default function RootStackNavigator() {
             component={CheckinSettingsScreen}
             options={{
               headerTitle: "Check-in Schedule",
+            }}
+          />
+          <Stack.Screen
+            name="EmergencyContacts"
+            component={EmergencyContactsScreen}
+            options={{
+              headerTitle: "Emergency Contacts",
+            }}
+          />
+          <Stack.Screen
+            name="MedicalID"
+            component={MedicalIDScreen}
+            options={{
+              headerTitle: "Medical ID",
+            }}
+          />
+          <Stack.Screen
+            name="UnitsLanguage"
+            component={UnitsLanguageScreen}
+            options={{
+              headerTitle: "Units & Language",
+            }}
+          />
+          <Stack.Screen
+            name="PrivacySettings"
+            component={PrivacySettingsScreen}
+            options={{
+              headerTitle: "Privacy Settings",
             }}
           />
         </>
