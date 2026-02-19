@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Colors, Spacing, BorderRadius, Typography } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useCheckinSettings } from "@/hooks/useCheckinSettings";
 
 function MetricCard({
   title,
@@ -52,7 +53,8 @@ export default function DashboardScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  useNotifications();
+  const { settings: checkinSettings, formatTime } = useCheckinSettings();
+  useNotifications(checkinSettings);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -123,7 +125,9 @@ export default function DashboardScreen() {
                 Daily Health Check-in
               </ThemedText>
               <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
-                Let ARYA record your vitals today
+                {checkinSettings.enabled
+                  ? `Scheduled at ${formatTime(checkinSettings.primaryTime)}`
+                  : "Let ARYA record your vitals today"}
               </ThemedText>
             </View>
           </View>
