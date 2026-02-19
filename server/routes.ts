@@ -673,6 +673,201 @@ Be thorough but avoid making assumptions beyond what is clearly visible.`;
     }
   });
 
+  app.post("/api/user/:userId/daily-checkin", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { data, conversationSummary } = req.body;
+
+      if (!data) {
+        return res.status(400).json({ error: "Health data is required" });
+      }
+
+      const [reading] = await db.insert(wearableReadings).values({
+        userId,
+        deviceType: "arya-checkin",
+        heartRate: data.heartRate,
+        bloodPressureSystolic: data.bloodPressureSystolic,
+        bloodPressureDiastolic: data.bloodPressureDiastolic,
+        bloodOxygenSaturation: data.bloodOxygenSaturation,
+        bodyTemperature: data.bodyTemperature,
+        sleepDuration: data.sleepDuration,
+        sleepQuality: data.sleepQuality,
+        steps: data.steps,
+        stressLevel: data.stressLevel,
+        notes: [data.mood ? `Mood: ${data.mood}` : null, data.symptoms ? `Symptoms: ${data.symptoms}` : null, data.notes].filter(Boolean).join("; ") || null,
+      }).returning();
+
+      const metricsText = [
+        data.heartRate ? `Heart Rate: ${data.heartRate} bpm` : null,
+        data.bloodPressureSystolic ? `Blood Pressure: ${data.bloodPressureSystolic}/${data.bloodPressureDiastolic} mmHg` : null,
+        data.bloodOxygenSaturation ? `SpO2: ${data.bloodOxygenSaturation}%` : null,
+        data.bodyTemperature ? `Temperature: ${data.bodyTemperature}°F` : null,
+        data.sleepDuration ? `Sleep: ${(data.sleepDuration / 60).toFixed(1)} hours` : null,
+        data.sleepQuality ? `Sleep Quality: ${data.sleepQuality}/100` : null,
+        data.steps ? `Steps: ${data.steps}` : null,
+        data.stressLevel ? `Stress Level: ${data.stressLevel}/100` : null,
+        data.mood ? `Mood: ${data.mood}` : null,
+        data.symptoms ? `Symptoms: ${data.symptoms}` : null,
+        data.notes ? `Notes: ${data.notes}` : null,
+      ].filter(Boolean).join("\n");
+
+      const summaryPrompt = `You are a health assistant. Based on the following daily health check-in data, provide a brief 2-3 sentence health summary for the user. Be encouraging but note any concerns.
+
+Health Metrics:
+${metricsText}
+
+${conversationSummary ? `Conversation Context: ${conversationSummary}` : ""}
+
+Provide a concise, friendly daily health summary.`;
+
+      const aiResponse = await sarvam.chat.completions.create({
+        model: "sarvam-m",
+        messages: [{ role: "user", content: summaryPrompt }],
+        max_tokens: 512,
+        temperature: 0.7,
+      });
+
+      const summary = aiResponse.choices[0].message.content || "Daily check-in recorded successfully.";
+
+      const now = new Date();
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const [report] = await db.insert(healthReports).values({
+        userId,
+        reportType: "daily-checkin",
+        periodStart: startOfDay,
+        periodEnd: now,
+        summary,
+        insights: [],
+        recommendations: [],
+        riskFactors: [],
+        trends: [],
+        overallScore: 0,
+        heartHealthScore: 0,
+        sleepScore: 0,
+        activityScore: 0,
+        stressScore: 0,
+      }).returning();
+
+      res.status(201).json({
+        success: true,
+        readingId: reading.id,
+        reportId: report.id,
+        summary,
+      });
+    } catch (error) {
+      console.error("Error saving daily check-in:", error);
+      res.status(500).json({ error: "Failed to save daily check-in" });
+    }
+  });
+
+  app.get("/api/user/:userId/daily-checkin/today", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const [todayReading] = await db
+        .select()
+        .from(wearableReadings)
+        .where(
+          and(
+            eq(wearableReadings.userId, userId),
+            eq(wearableReadings.deviceType, "arya-checkin"),
+            gte(wearableReadings.recordedAt, today),
+            lte(wearableReadings.recordedAt, todayEnd)
+          )
+        )
+        .orderBy(desc(wearableReadings.recordedAt))
+        .limit(1);
+
+      res.json({
+        completed: !!todayReading,
+        reading: todayReading || null,
+      });
+    } catch (error) {
+      console.error("Error checking today's check-in:", error);
+      res.status(500).json({ error: "Failed to check today's check-in" });
+    }
+  });
+
+  app.post("/api/user/:userId/daily-checkin/parse", async (req: Request, res: Response) => {
+    try {
+      const { conversation } = req.body;
+
+      if (!conversation) {
+        return res.status(400).json({ error: "Conversation text is required" });
+      }
+
+      const parsePrompt = `You are a health data extraction assistant. Parse the following health check-in conversation and extract structured health metrics.
+
+Conversation:
+${conversation}
+
+Extract the following metrics from the conversation. Return null for any metric not mentioned.
+Respond ONLY with valid JSON in this exact format:
+{
+  "heartRate": <number or null>,
+  "bloodPressureSystolic": <number or null>,
+  "bloodPressureDiastolic": <number or null>,
+  "bloodOxygenSaturation": <number or null>,
+  "bodyTemperature": <number or null>,
+  "sleepDuration": <number in minutes or null>,
+  "sleepQuality": <number 0-100 or null>,
+  "steps": <number or null>,
+  "stressLevel": <number 0-100 or null>,
+  "mood": <string or null>,
+  "symptoms": <string or null>,
+  "notes": <string or null>
+}
+
+Rules:
+- Convert sleep hours to minutes (e.g., 7.5 hours = 450 minutes)
+- For stress, map descriptive words: "low"=20, "moderate"=50, "high"=75, "very high"=90
+- For sleep quality, map descriptive words: "poor"=25, "fair"=50, "good"=75, "great"=90, "excellent"=95
+- Capture any symptoms or mood descriptions as strings
+- Include any additional health notes in the notes field`;
+
+      const aiResponse = await sarvam.chat.completions.create({
+        model: "sarvam-m",
+        messages: [{ role: "user", content: parsePrompt }],
+        max_tokens: 512,
+        temperature: 0.3,
+      });
+
+      const responseContent = aiResponse.choices[0].message.content || "{}";
+
+      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+      const parsedData = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+
+      res.json({
+        success: true,
+        data: {
+          heartRate: parsedData.heartRate ?? null,
+          bloodPressureSystolic: parsedData.bloodPressureSystolic ?? null,
+          bloodPressureDiastolic: parsedData.bloodPressureDiastolic ?? null,
+          bloodOxygenSaturation: parsedData.bloodOxygenSaturation ?? null,
+          bodyTemperature: parsedData.bodyTemperature ?? null,
+          sleepDuration: parsedData.sleepDuration ?? null,
+          sleepQuality: parsedData.sleepQuality ?? null,
+          steps: parsedData.steps ?? null,
+          stressLevel: parsedData.stressLevel ?? null,
+          mood: parsedData.mood ?? null,
+          symptoms: parsedData.symptoms ?? null,
+          notes: parsedData.notes ?? null,
+        },
+      });
+    } catch (error) {
+      console.error("Error parsing check-in conversation:", error);
+      res.status(500).json({ error: "Failed to parse conversation" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
