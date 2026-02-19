@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
-  Arya: { conversationId?: number } | undefined;
+  Arya: { conversationId?: number; mode?: "chat" | "checkin" } | undefined;
   SOS: undefined;
   AddMedication: { medicationId?: string } | undefined;
   AddRecord: undefined;
