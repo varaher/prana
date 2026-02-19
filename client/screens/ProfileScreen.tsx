@@ -2,6 +2,8 @@ import React from "react";
 import { View, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
@@ -10,6 +12,7 @@ import { Card } from "@/components/Card";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Spacing, BorderRadius, Typography } from "@/constants/theme";
+import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 interface SettingsItem {
   icon: keyof typeof Feather.glyphMap;
@@ -25,6 +28,7 @@ export default function ProfileScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { user, logout, updateUser } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -83,8 +87,9 @@ export default function ProfileScreen() {
         {
           icon: "bell",
           title: "Notifications",
-          subtitle: "Medication reminders, alerts",
+          subtitle: "Check-in schedule & reminders",
           rightIcon: "chevron-right",
+          action: () => navigation.navigate("CheckinSettings"),
         },
         {
           icon: "globe",
