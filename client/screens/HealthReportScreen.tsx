@@ -239,7 +239,7 @@ export default function HealthReportScreen() {
             ) : null}
 
             {latestReport.riskFactors && latestReport.riskFactors.length > 0 ? (
-              <Card style={[styles.insightsCard, { borderLeftWidth: 3, borderLeftColor: colors.danger }]}>
+              <Card style={{ ...styles.insightsCard, borderLeftWidth: 3, borderLeftColor: colors.danger }}>
                 <View style={styles.insightHeader}>
                   <Feather name="alert-triangle" size={20} color={colors.danger} />
                   <ThemedText style={styles.insightTitle}>Risk Factors</ThemedText>

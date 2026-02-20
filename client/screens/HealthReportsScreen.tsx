@@ -1,124 +1,70 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet, ScrollView, Pressable, Dimensions } from "react-native";
+import React, { useState, useMemo } from "react";
+import { View, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Card } from "@/components/Card";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/hooks/useAuth";
 import { Colors, Spacing, BorderRadius, Typography } from "@/constants/theme";
 
-const HEALTH_DATA_KEY = "@erprana_health_data";
+type TimePeriod = "week" | "month" | "quarter" | "year";
 
-type TimePeriod = "hourly" | "monthly" | "quarterly" | "yearly";
-
-interface HealthMetric {
-  timestamp: number;
-  heartRate: number;
-  steps: number;
-  sleep: number;
-  calories: number;
-  bloodPressureSystolic: number;
-  bloodPressureDiastolic: number;
-  weight: number;
-  bloodSugar: number;
+interface WearableReading {
+  id: number;
+  userId: string;
+  recordedAt: string;
+  heartRate: number | null;
+  heartRateVariability: number | null;
+  bloodOxygenSaturation: number | null;
+  bloodPressureSystolic: number | null;
+  bloodPressureDiastolic: number | null;
+  respiratoryRate: number | null;
+  bodyTemperature: number | null;
+  steps: number | null;
+  caloriesBurned: number | null;
+  activeMinutes: number | null;
+  sleepDuration: number | null;
+  sleepQuality: number | null;
+  stressLevel: number | null;
+  vo2Max: number | null;
+  recoveryScore: number | null;
+  deviceType: string | null;
 }
 
-interface AggregatedData {
-  period: string;
-  avgHeartRate: number;
-  totalSteps: number;
-  avgSleep: number;
-  totalCalories: number;
-  avgBloodPressure: string;
-  avgWeight: number;
-  avgBloodSugar: number;
+interface AggregatedMetrics {
+  avgHeartRate: number | null;
+  totalSteps: number | null;
+  avgSleep: number | null;
+  totalCalories: number | null;
+  avgBpSystolic: number | null;
+  avgBpDiastolic: number | null;
+  avgStress: number | null;
+  avgSpO2: number | null;
+  readingCount: number;
 }
 
-const generateSampleData = (): HealthMetric[] => {
-  const data: HealthMetric[] = [];
-  const now = Date.now();
-  for (let i = 0; i < 365; i++) {
-    const dayOffset = i * 24 * 60 * 60 * 1000;
-    for (let h = 0; h < 24; h += 4) {
-      data.push({
-        timestamp: now - dayOffset - h * 60 * 60 * 1000,
-        heartRate: 65 + Math.floor(Math.random() * 20),
-        steps: Math.floor(Math.random() * 500),
-        sleep: h < 8 ? Math.random() * 2 : 0,
-        calories: Math.floor(Math.random() * 150),
-        bloodPressureSystolic: 110 + Math.floor(Math.random() * 20),
-        bloodPressureDiastolic: 70 + Math.floor(Math.random() * 15),
-        weight: 68 + Math.random() * 2,
-        bloodSugar: 90 + Math.floor(Math.random() * 20),
-      });
-    }
-  }
-  return data;
-};
+const PERIODS: { key: TimePeriod; label: string; days: number }[] = [
+  { key: "week", label: "7 Days", days: 7 },
+  { key: "month", label: "30 Days", days: 30 },
+  { key: "quarter", label: "90 Days", days: 90 },
+  { key: "year", label: "1 Year", days: 365 },
+];
 
-const aggregateData = (data: HealthMetric[], period: TimePeriod): AggregatedData[] => {
-  const grouped: { [key: string]: HealthMetric[] } = {};
-  
-  data.forEach(metric => {
-    const date = new Date(metric.timestamp);
-    let key: string;
-    
-    switch (period) {
-      case "hourly":
-        const hourOffset = Math.floor((Date.now() - metric.timestamp) / (1000 * 60 * 60));
-        if (hourOffset < 24) {
-          key = `${hourOffset}h ago`;
-        } else {
-          return;
-        }
-        break;
-      case "monthly":
-        if (Date.now() - metric.timestamp > 30 * 24 * 60 * 60 * 1000) return;
-        key = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        break;
-      case "quarterly":
-        if (Date.now() - metric.timestamp > 90 * 24 * 60 * 60 * 1000) return;
-        const weekNum = Math.floor((Date.now() - metric.timestamp) / (7 * 24 * 60 * 60 * 1000));
-        key = `Week ${12 - weekNum}`;
-        break;
-      case "yearly":
-        key = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-        break;
-      default:
-        key = date.toDateString();
-    }
-    
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(metric);
-  });
-  
-  return Object.entries(grouped)
-    .map(([period, metrics]) => {
-      const avgHeartRate = Math.round(metrics.reduce((sum, m) => sum + m.heartRate, 0) / metrics.length);
-      const totalSteps = metrics.reduce((sum, m) => sum + m.steps, 0);
-      const avgSleep = +(metrics.reduce((sum, m) => sum + m.sleep, 0) / Math.max(metrics.filter(m => m.sleep > 0).length, 1)).toFixed(1);
-      const totalCalories = metrics.reduce((sum, m) => sum + m.calories, 0);
-      const avgSystolic = Math.round(metrics.reduce((sum, m) => sum + m.bloodPressureSystolic, 0) / metrics.length);
-      const avgDiastolic = Math.round(metrics.reduce((sum, m) => sum + m.bloodPressureDiastolic, 0) / metrics.length);
-      const avgWeight = +(metrics.reduce((sum, m) => sum + m.weight, 0) / metrics.length).toFixed(1);
-      const avgBloodSugar = Math.round(metrics.reduce((sum, m) => sum + m.bloodSugar, 0) / metrics.length);
-      
-      return {
-        period,
-        avgHeartRate,
-        totalSteps,
-        avgSleep,
-        totalCalories,
-        avgBloodPressure: `${avgSystolic}/${avgDiastolic}`,
-        avgWeight,
-        avgBloodSugar,
-      };
-    })
-    .slice(0, period === "hourly" ? 24 : period === "monthly" ? 30 : period === "quarterly" ? 12 : 12);
-};
+function avg(values: (number | null)[]): number | null {
+  const valid = values.filter((v): v is number => v !== null && v !== undefined);
+  if (valid.length === 0) return null;
+  return Math.round(valid.reduce((s, v) => s + v, 0) / valid.length);
+}
+
+function sum(values: (number | null)[]): number | null {
+  const valid = values.filter((v): v is number => v !== null && v !== undefined);
+  if (valid.length === 0) return null;
+  return valid.reduce((s, v) => s + v, 0);
+}
 
 function MetricRow({
   icon,
@@ -130,27 +76,35 @@ function MetricRow({
 }: {
   icon: keyof typeof Feather.glyphMap;
   label: string;
-  value: string | number;
+  value: string | number | null;
   unit: string;
   color: string;
-  trend?: "up" | "down" | "stable";
+  trend?: "up" | "down" | "stable" | null;
 }) {
   const { theme } = useTheme();
-  
+
   return (
-    <View style={styles.metricRow}>
-      <View style={[styles.metricIcon, { backgroundColor: color + "20" }]}>
+    <View style={[styles.metricRow, { borderBottomColor: theme.borderLight }]}>
+      <View style={[styles.metricIcon, { backgroundColor: color + "15" }]}>
         <Feather name={icon} size={18} color={color} />
       </View>
       <View style={styles.metricInfo}>
         <ThemedText style={[styles.metricLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
         <View style={styles.metricValueRow}>
-          <ThemedText style={styles.metricValue}>{value}</ThemedText>
+          <ThemedText style={styles.metricValue}>{value !== null ? value : "--"}</ThemedText>
           <ThemedText style={[styles.metricUnit, { color: theme.textSecondary }]}>{unit}</ThemedText>
         </View>
       </View>
       {trend ? (
-        <View style={[styles.trendIcon, { backgroundColor: trend === "up" ? Colors.light.success + "20" : trend === "down" ? Colors.light.danger + "20" : theme.border }]}>
+        <View
+          style={[
+            styles.trendIcon,
+            {
+              backgroundColor:
+                trend === "up" ? Colors.light.success + "20" : trend === "down" ? Colors.light.danger + "20" : theme.borderLight,
+            },
+          ]}
+        >
           <Feather
             name={trend === "up" ? "trending-up" : trend === "down" ? "trending-down" : "minus"}
             size={14}
@@ -166,52 +120,79 @@ export default function HealthReportsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { theme } = useTheme();
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("monthly");
-  const [healthData, setHealthData] = useState<HealthMetric[]>([]);
-  const [aggregatedData, setAggregatedData] = useState<AggregatedData[]>([]);
+  const { user } = useAuth();
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("month");
 
-  useEffect(() => {
-    loadHealthData();
-  }, []);
+  const { data: readings = [], isLoading } = useQuery<WearableReading[]>({
+    queryKey: ["/api/user", user?.id, "wearable-readings"],
+    enabled: !!user?.id,
+  });
 
-  useEffect(() => {
-    if (healthData.length > 0) {
-      setAggregatedData(aggregateData(healthData, selectedPeriod));
-    }
-  }, [healthData, selectedPeriod]);
+  const periodConfig = PERIODS.find((p) => p.key === selectedPeriod)!;
 
-  const loadHealthData = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(HEALTH_DATA_KEY);
-      if (stored) {
-        setHealthData(JSON.parse(stored));
-      } else {
-        const sample = generateSampleData();
-        setHealthData(sample);
-        await AsyncStorage.setItem(HEALTH_DATA_KEY, JSON.stringify(sample));
-      }
-    } catch (error) {
-      console.error("Error loading health data:", error);
-      setHealthData(generateSampleData());
-    }
-  };
+  const { current, previous } = useMemo(() => {
+    const now = Date.now();
+    const periodMs = periodConfig.days * 24 * 60 * 60 * 1000;
 
-  const periods: { key: TimePeriod; label: string }[] = [
-    { key: "hourly", label: "Hourly" },
-    { key: "monthly", label: "Monthly" },
-    { key: "quarterly", label: "Quarterly" },
-    { key: "yearly", label: "Yearly" },
-  ];
+    const currentReadings = readings.filter((r) => {
+      const t = new Date(r.recordedAt).getTime();
+      return t >= now - periodMs;
+    });
 
-  const latestData = aggregatedData[0];
-  const previousData = aggregatedData[1];
+    const previousReadings = readings.filter((r) => {
+      const t = new Date(r.recordedAt).getTime();
+      return t >= now - periodMs * 2 && t < now - periodMs;
+    });
 
-  const getTrend = (current: number, previous: number): "up" | "down" | "stable" => {
-    if (!previous) return "stable";
-    const diff = current - previous;
-    if (Math.abs(diff) < 0.05 * previous) return "stable";
+    const aggregate = (data: WearableReading[]): AggregatedMetrics => ({
+      avgHeartRate: avg(data.map((r) => r.heartRate)),
+      totalSteps: sum(data.map((r) => r.steps)),
+      avgSleep: avg(data.map((r) => (r.sleepDuration ? +(r.sleepDuration / 60).toFixed(1) : null))),
+      totalCalories: sum(data.map((r) => r.caloriesBurned)),
+      avgBpSystolic: avg(data.map((r) => r.bloodPressureSystolic)),
+      avgBpDiastolic: avg(data.map((r) => r.bloodPressureDiastolic)),
+      avgStress: avg(data.map((r) => r.stressLevel)),
+      avgSpO2: avg(data.map((r) => r.bloodOxygenSaturation)),
+      readingCount: data.length,
+    });
+
+    return {
+      current: aggregate(currentReadings),
+      previous: aggregate(previousReadings),
+    };
+  }, [readings, periodConfig]);
+
+  const getTrend = (cur: number | null, prev: number | null): "up" | "down" | "stable" | null => {
+    if (cur === null || prev === null) return null;
+    const diff = cur - prev;
+    if (Math.abs(diff) < 0.05 * prev) return "stable";
     return diff > 0 ? "up" : "down";
   };
+
+  const dayReadings = useMemo(() => {
+    const now = Date.now();
+    const periodMs = periodConfig.days * 24 * 60 * 60 * 1000;
+    const filtered = readings.filter((r) => new Date(r.recordedAt).getTime() >= now - periodMs);
+
+    const grouped: { [key: string]: WearableReading[] } = {};
+    filtered.forEach((r) => {
+      const d = new Date(r.recordedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      if (!grouped[d]) grouped[d] = [];
+      grouped[d].push(r);
+    });
+
+    return Object.entries(grouped)
+      .map(([date, items]) => ({
+        date,
+        heartRate: avg(items.map((i) => i.heartRate)),
+        steps: sum(items.map((i) => i.steps)),
+        sleep: avg(items.map((i) => (i.sleepDuration ? +(i.sleepDuration / 60).toFixed(1) : null))),
+        calories: sum(items.map((i) => i.caloriesBurned)),
+      }))
+      .slice(0, 10);
+  }, [readings, periodConfig]);
+
+  const hasData = readings.length > 0;
 
   return (
     <ThemedView style={styles.container}>
@@ -219,155 +200,163 @@ export default function HealthReportsScreen() {
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
-        <ThemedText style={styles.headerTitle}>Health Reports</ThemedText>
+        <ThemedText style={styles.headerTitle}>Health Trends</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.periodSelector}>
-        {periods.map(({ key, label }) => (
+      <View style={[styles.periodSelector, { backgroundColor: theme.backgroundDefault }]}>
+        {PERIODS.map(({ key, label }) => (
           <Pressable
             key={key}
-            style={[
-              styles.periodButton,
-              selectedPeriod === key && { backgroundColor: theme.primary },
-            ]}
+            style={[styles.periodButton, selectedPeriod === key && { backgroundColor: theme.primary }]}
             onPress={() => setSelectedPeriod(key)}
           >
-            <ThemedText
-              style={[
-                styles.periodButtonText,
-                { color: selectedPeriod === key ? "#FFFFFF" : theme.textSecondary },
-              ]}
-            >
+            <ThemedText style={[styles.periodButtonText, { color: selectedPeriod === key ? "#FFFFFF" : theme.textSecondary }]}>
               {label}
             </ThemedText>
           </Pressable>
         ))}
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + Spacing.xl }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Card style={styles.summaryCard}>
-          <ThemedText style={styles.summaryTitle}>
-            {selectedPeriod === "hourly" ? "Last 24 Hours" : 
-             selectedPeriod === "monthly" ? "This Month" :
-             selectedPeriod === "quarterly" ? "This Quarter" : "This Year"} Summary
+      {isLoading ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      ) : !hasData ? (
+        <View style={styles.emptyState}>
+          <View style={[styles.emptyIcon, { backgroundColor: theme.primary + "12" }]}>
+            <Feather name="bar-chart-2" size={40} color={theme.primary} />
+          </View>
+          <ThemedText style={styles.emptyTitle}>No Health Data Yet</ThemedText>
+          <ThemedText style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+            Add wearable readings or complete a daily check-in with ARYA to see your health trends here.
           </ThemedText>
-          
-          {latestData ? (
-            <>
-              <MetricRow
-                icon="heart"
-                label="Avg Heart Rate"
-                value={latestData.avgHeartRate}
-                unit="bpm"
-                color={Colors.light.danger}
-                trend={previousData ? getTrend(latestData.avgHeartRate, previousData.avgHeartRate) : undefined}
-              />
-              <MetricRow
-                icon="activity"
-                label="Total Steps"
-                value={latestData.totalSteps.toLocaleString()}
-                unit="steps"
-                color={Colors.light.primary}
-                trend={previousData ? getTrend(latestData.totalSteps, previousData.totalSteps) : undefined}
-              />
-              <MetricRow
-                icon="moon"
-                label="Avg Sleep"
-                value={latestData.avgSleep}
-                unit="hours"
-                color={Colors.light.primaryDark}
-                trend={previousData ? getTrend(latestData.avgSleep, previousData.avgSleep) : undefined}
-              />
-              <MetricRow
-                icon="zap"
-                label="Total Calories"
-                value={latestData.totalCalories.toLocaleString()}
-                unit="kcal"
-                color={Colors.light.warning}
-                trend={previousData ? getTrend(latestData.totalCalories, previousData.totalCalories) : undefined}
-              />
-              <MetricRow
-                icon="thermometer"
-                label="Avg Blood Pressure"
-                value={latestData.avgBloodPressure}
-                unit="mmHg"
-                color={Colors.light.primary}
-              />
-              <MetricRow
-                icon="droplet"
-                label="Avg Blood Sugar"
-                value={latestData.avgBloodSugar}
-                unit="mg/dL"
-                color={Colors.light.success}
-                trend={previousData ? getTrend(latestData.avgBloodSugar, previousData.avgBloodSugar) : undefined}
-              />
-              <MetricRow
-                icon="user"
-                label="Avg Weight"
-                value={latestData.avgWeight}
-                unit="kg"
-                color={Colors.light.textSecondary}
-                trend={previousData ? getTrend(latestData.avgWeight, previousData.avgWeight) : undefined}
-              />
-            </>
-          ) : (
-            <ThemedText style={[styles.noDataText, { color: theme.textSecondary }]}>
-              No data available for this period
-            </ThemedText>
-          )}
-        </Card>
-
-        <ThemedText style={styles.sectionTitle}>Detailed Breakdown</ThemedText>
-        
-        {aggregatedData.slice(0, 10).map((data, index) => (
-          <Card key={index} style={styles.breakdownCard}>
-            <View style={styles.breakdownHeader}>
-              <ThemedText style={styles.breakdownPeriod}>{data.period}</ThemedText>
-              <View style={[styles.healthBadge, { backgroundColor: Colors.light.success + "20" }]}>
-                <Feather name="check-circle" size={12} color={Colors.light.success} />
-                <ThemedText style={[styles.healthBadgeText, { color: Colors.light.success }]}>
-                  Healthy
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + Spacing.xl }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Card style={styles.summaryCard}>
+            <View style={styles.summaryHeader}>
+              <ThemedText style={styles.summaryTitle}>
+                {periodConfig.label} Summary
+              </ThemedText>
+              <View style={[styles.readingsBadge, { backgroundColor: theme.primary + "15" }]}>
+                <ThemedText style={[styles.readingsText, { color: theme.primary }]}>
+                  {current.readingCount} readings
                 </ThemedText>
               </View>
             </View>
-            <View style={styles.breakdownMetrics}>
-              <View style={styles.breakdownMetric}>
-                <Feather name="heart" size={14} color={Colors.light.danger} />
-                <ThemedText style={styles.breakdownValue}>{data.avgHeartRate}</ThemedText>
-              </View>
-              <View style={styles.breakdownMetric}>
-                <Feather name="activity" size={14} color={Colors.light.primary} />
-                <ThemedText style={styles.breakdownValue}>{data.totalSteps.toLocaleString()}</ThemedText>
-              </View>
-              <View style={styles.breakdownMetric}>
-                <Feather name="moon" size={14} color={Colors.light.primaryDark} />
-                <ThemedText style={styles.breakdownValue}>{data.avgSleep}h</ThemedText>
-              </View>
-              <View style={styles.breakdownMetric}>
-                <Feather name="zap" size={14} color={Colors.light.warning} />
-                <ThemedText style={styles.breakdownValue}>{data.totalCalories}</ThemedText>
-              </View>
-            </View>
-          </Card>
-        ))}
 
-        {aggregatedData.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Feather name="bar-chart-2" size={48} color={theme.textSecondary} />
-            <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
-              No health data available yet.
-            </ThemedText>
-            <ThemedText style={[styles.emptySubtext, { color: theme.textSecondary }]}>
-              Connect a wearable device or manually log your vitals to see reports.
-            </ThemedText>
+            {current.readingCount === 0 ? (
+              <ThemedText style={[styles.noDataText, { color: theme.textSecondary }]}>
+                No readings in this period. Try a different time range.
+              </ThemedText>
+            ) : (
+              <>
+                <MetricRow
+                  icon="heart"
+                  label="Avg Heart Rate"
+                  value={current.avgHeartRate}
+                  unit="bpm"
+                  color="#EF4444"
+                  trend={getTrend(current.avgHeartRate, previous.avgHeartRate)}
+                />
+                <MetricRow
+                  icon="activity"
+                  label="Total Steps"
+                  value={current.totalSteps?.toLocaleString() ?? null}
+                  unit="steps"
+                  color="#2563EB"
+                  trend={getTrend(current.totalSteps, previous.totalSteps)}
+                />
+                <MetricRow
+                  icon="moon"
+                  label="Avg Sleep"
+                  value={current.avgSleep}
+                  unit="hours"
+                  color="#6366F1"
+                  trend={getTrend(current.avgSleep, previous.avgSleep)}
+                />
+                <MetricRow
+                  icon="zap"
+                  label="Total Calories"
+                  value={current.totalCalories?.toLocaleString() ?? null}
+                  unit="kcal"
+                  color="#F59E0B"
+                  trend={getTrend(current.totalCalories, previous.totalCalories)}
+                />
+                <MetricRow
+                  icon="thermometer"
+                  label="Avg Blood Pressure"
+                  value={current.avgBpSystolic !== null && current.avgBpDiastolic !== null ? `${current.avgBpSystolic}/${current.avgBpDiastolic}` : null}
+                  unit="mmHg"
+                  color="#2563EB"
+                />
+                <MetricRow
+                  icon="droplet"
+                  label="Avg SpO2"
+                  value={current.avgSpO2 !== null ? `${current.avgSpO2}%` : null}
+                  unit=""
+                  color="#10B981"
+                  trend={getTrend(current.avgSpO2, previous.avgSpO2)}
+                />
+                <MetricRow
+                  icon="frown"
+                  label="Avg Stress"
+                  value={current.avgStress}
+                  unit="/100"
+                  color="#EF4444"
+                  trend={getTrend(current.avgStress, previous.avgStress)}
+                />
+              </>
+            )}
           </Card>
-        ) : null}
-      </ScrollView>
+
+          {dayReadings.length > 0 ? (
+            <>
+              <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+                DAILY BREAKDOWN
+              </ThemedText>
+              {dayReadings.map((data, index) => (
+                <Card key={index} style={styles.breakdownCard}>
+                  <View style={styles.breakdownHeader}>
+                    <ThemedText style={styles.breakdownDate}>{data.date}</ThemedText>
+                  </View>
+                  <View style={styles.breakdownMetrics}>
+                    {data.heartRate !== null ? (
+                      <View style={styles.breakdownMetric}>
+                        <Feather name="heart" size={13} color="#EF4444" />
+                        <ThemedText style={styles.breakdownValue}>{data.heartRate}</ThemedText>
+                      </View>
+                    ) : null}
+                    {data.steps !== null ? (
+                      <View style={styles.breakdownMetric}>
+                        <Feather name="activity" size={13} color="#2563EB" />
+                        <ThemedText style={styles.breakdownValue}>{data.steps.toLocaleString()}</ThemedText>
+                      </View>
+                    ) : null}
+                    {data.sleep !== null ? (
+                      <View style={styles.breakdownMetric}>
+                        <Feather name="moon" size={13} color="#6366F1" />
+                        <ThemedText style={styles.breakdownValue}>{data.sleep}h</ThemedText>
+                      </View>
+                    ) : null}
+                    {data.calories !== null ? (
+                      <View style={styles.breakdownMetric}>
+                        <Feather name="zap" size={13} color="#F59E0B" />
+                        <ThemedText style={styles.breakdownValue}>{data.calories}</ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+                </Card>
+              ))}
+            </>
+          ) : null}
+        </ScrollView>
+      )}
     </ThemedView>
   );
 }
@@ -397,7 +386,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
-    backgroundColor: Colors.light.cardBackground,
     borderRadius: BorderRadius.md,
     padding: Spacing.xs,
   },
@@ -411,6 +399,34 @@ const styles = StyleSheet.create({
     ...Typography.small,
     fontWeight: "600",
   },
+  loadingState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: Spacing["2xl"],
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.xl,
+  },
+  emptyTitle: {
+    ...Typography.h4,
+    marginBottom: Spacing.sm,
+  },
+  emptySubtitle: {
+    ...Typography.body,
+    textAlign: "center",
+    lineHeight: 22,
+  },
   scrollView: {
     flex: 1,
   },
@@ -419,18 +435,36 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.lg,
   },
   summaryTitle: {
     ...Typography.h4,
-    marginBottom: Spacing.lg,
+  },
+  readingsBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+  },
+  readingsText: {
+    ...Typography.caption,
+    fontWeight: "600",
+  },
+  noDataText: {
+    ...Typography.body,
+    textAlign: "center",
+    paddingVertical: Spacing.xl,
   },
   metricRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
   },
   metricIcon: {
     width: 36,
@@ -465,44 +499,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  noDataText: {
-    ...Typography.body,
-    textAlign: "center",
-    paddingVertical: Spacing.xl,
-  },
   sectionTitle: {
-    ...Typography.h4,
+    ...Typography.caption,
+    fontWeight: "700",
+    letterSpacing: 0.8,
     marginBottom: Spacing.md,
+    marginLeft: Spacing.xs,
   },
   breakdownCard: {
     padding: Spacing.md,
     marginBottom: Spacing.sm,
   },
   breakdownHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: Spacing.sm,
   },
-  breakdownPeriod: {
+  breakdownDate: {
     ...Typography.body,
-    fontWeight: "600",
-  },
-  healthBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-    gap: 4,
-  },
-  healthBadgeText: {
-    ...Typography.caption,
     fontWeight: "600",
   },
   breakdownMetrics: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: Spacing.lg,
   },
   breakdownMetric: {
     flexDirection: "row",
@@ -512,18 +530,5 @@ const styles = StyleSheet.create({
   breakdownValue: {
     ...Typography.small,
     fontWeight: "500",
-  },
-  emptyCard: {
-    padding: Spacing.xl,
-    alignItems: "center",
-  },
-  emptyText: {
-    ...Typography.body,
-    marginTop: Spacing.lg,
-  },
-  emptySubtext: {
-    ...Typography.small,
-    textAlign: "center",
-    marginTop: Spacing.sm,
   },
 });
