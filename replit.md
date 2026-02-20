@@ -100,6 +100,7 @@ server/
 - `POST /api/user/:userId/health-reports/generate` - Generate AI health report from wearable data
 - `GET /api/user/:userId/visual-assessments` - Get user's visual assessment history
 - `POST /api/user/:userId/visual-assessments/analyze` - Analyze patient image with AI Vision
+- `POST /api/user/:userId/health-trends/narrative` - Generate AI natural language health trend narrative (period: week/month/quarter/year)
 
 ## Running the App
 - Express backend runs on port 5000
@@ -116,3 +117,4 @@ server/
 - AI Health Reports with personalized insights, recommendations, and 5 health scores
 - Visual Patient Assessment with AI-powered camera analysis for consciousness, injuries, pain indicators, and urgency levels
 - ARYA tab button redesigned with chat icon and label for clarity
+- Health Trends redesigned with AI-generated natural language narrative summaries (EMR discharge summary style, layman-friendly) including wellness score, health story, key insights, areas to watch, and action plan
