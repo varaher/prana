@@ -106,49 +106,48 @@ export default function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
+        <Card
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
             navigation.navigate("Arya", { mode: "checkin" });
           }}
+          style={{ ...styles.checkinCard, borderColor: theme.primary + "30" }}
         >
-          <Card style={{ ...styles.checkinCard, borderColor: theme.primary + "30" }}>
-            <View style={styles.checkinTop}>
-              <View
-                style={[
-                  styles.checkinIcon,
-                  { backgroundColor: theme.primary + "12" },
-                ]}
-              >
-                <Feather
-                  name="message-circle"
-                  size={22}
-                  color={theme.primary}
-                />
-              </View>
-              <View style={styles.checkinText}>
-                <ThemedText style={styles.checkinTitle}>
-                  Daily Health Check-in
-                </ThemedText>
-                <ThemedText
-                  style={[styles.checkinSub, { color: theme.textSecondary }]}
-                >
-                  {checkinSettings.enabled
-                    ? `Scheduled at ${formatTime(checkinSettings.primaryTime)}`
-                    : "Let ARYA record your vitals today"}
-                </ThemedText>
-              </View>
-            </View>
+          <View style={styles.checkinTop}>
             <View
-              style={[styles.checkinBtn, { backgroundColor: theme.primary }]}
+              style={[
+                styles.checkinIcon,
+                { backgroundColor: theme.primary + "12" },
+              ]}
             >
-              <ThemedText style={styles.checkinBtnText}>
-                Start Check-in
-              </ThemedText>
-              <Feather name="arrow-right" size={16} color="#FFFFFF" />
+              <Feather
+                name="message-circle"
+                size={22}
+                color={theme.primary}
+              />
             </View>
-          </Card>
-        </Pressable>
+            <View style={styles.checkinText}>
+              <ThemedText style={styles.checkinTitle}>
+                Daily Health Check-in
+              </ThemedText>
+              <ThemedText
+                style={[styles.checkinSub, { color: theme.textSecondary }]}
+              >
+                {checkinSettings.enabled
+                  ? `Scheduled at ${formatTime(checkinSettings.primaryTime)}`
+                  : "Let ARYA record your vitals today"}
+              </ThemedText>
+            </View>
+          </View>
+          <View
+            style={[styles.checkinBtn, { backgroundColor: theme.primary }]}
+          >
+            <ThemedText style={styles.checkinBtnText}>
+              Start Check-in
+            </ThemedText>
+            <Feather name="arrow-right" size={16} color="#FFFFFF" />
+          </View>
+        </Card>
 
         <ThemedText
           style={[styles.sectionLabel, { color: theme.textSecondary }]}
@@ -157,28 +156,26 @@ export default function DashboardScreen() {
         </ThemedText>
         <View style={styles.actionsGrid}>
           {quickActions.map((action) => (
-            <Pressable
+            <Card
               key={action.label}
-              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, flex: 1 })}
+              style={{ ...styles.actionCard, flex: 1 }}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 navigation.navigate(action.route);
               }}
             >
-              <Card style={styles.actionCard}>
-                <View
-                  style={[
-                    styles.actionIcon,
-                    { backgroundColor: action.bg },
-                  ]}
-                >
-                  <Feather name={action.icon} size={22} color={action.color} />
-                </View>
-                <ThemedText style={styles.actionLabel}>
-                  {action.label}
-                </ThemedText>
-              </Card>
-            </Pressable>
+              <View
+                style={[
+                  styles.actionIcon,
+                  { backgroundColor: action.bg },
+                ]}
+              >
+                <Feather name={action.icon} size={22} color={action.color} />
+              </View>
+              <ThemedText style={styles.actionLabel}>
+                {action.label}
+              </ThemedText>
+            </Card>
           ))}
         </View>
 
@@ -188,108 +185,102 @@ export default function DashboardScreen() {
           EXPLORE
         </ThemedText>
 
-        <Pressable
+        <Card
           onPress={() => navigation.navigate("HealthReports")}
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          style={styles.exploreCard}
         >
-          <Card style={styles.exploreCard}>
-            <View style={styles.exploreRow}>
-              <View
-                style={[
-                  styles.exploreIcon,
-                  { backgroundColor: "#6366F115" },
-                ]}
-              >
-                <Feather name="trending-up" size={20} color="#6366F1" />
-              </View>
-              <View style={styles.exploreText}>
-                <ThemedText style={styles.exploreTitle}>
-                  Health Trends
-                </ThemedText>
-                <ThemedText
-                  style={[styles.exploreSub, { color: theme.textSecondary }]}
-                >
-                  Track your health score over time
-                </ThemedText>
-              </View>
-              <Feather
-                name="chevron-right"
-                size={18}
-                color={theme.textSecondary}
-              />
+          <View style={styles.exploreRow}>
+            <View
+              style={[
+                styles.exploreIcon,
+                { backgroundColor: "#6366F115" },
+              ]}
+            >
+              <Feather name="trending-up" size={20} color="#6366F1" />
             </View>
-          </Card>
-        </Pressable>
+            <View style={styles.exploreText}>
+              <ThemedText style={styles.exploreTitle}>
+                Health Trends
+              </ThemedText>
+              <ThemedText
+                style={[styles.exploreSub, { color: theme.textSecondary }]}
+              >
+                Track your health score over time
+              </ThemedText>
+            </View>
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={theme.textSecondary}
+            />
+          </View>
+        </Card>
 
-        <Pressable
+        <Card
           onPress={() => navigation.navigate("Arya")}
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          style={styles.exploreCard}
         >
-          <Card style={styles.exploreCard}>
-            <View style={styles.exploreRow}>
-              <View
-                style={[
-                  styles.exploreIcon,
-                  { backgroundColor: theme.primary + "12" },
-                ]}
-              >
-                <Feather
-                  name="message-circle"
-                  size={20}
-                  color={theme.primary}
-                />
-              </View>
-              <View style={styles.exploreText}>
-                <ThemedText style={styles.exploreTitle}>
-                  Talk to ARYA
-                </ThemedText>
-                <ThemedText
-                  style={[styles.exploreSub, { color: theme.textSecondary }]}
-                >
-                  AI symptom checker and health assistant
-                </ThemedText>
-              </View>
+          <View style={styles.exploreRow}>
+            <View
+              style={[
+                styles.exploreIcon,
+                { backgroundColor: theme.primary + "12" },
+              ]}
+            >
               <Feather
-                name="chevron-right"
-                size={18}
-                color={theme.textSecondary}
+                name="message-circle"
+                size={20}
+                color={theme.primary}
               />
             </View>
-          </Card>
-        </Pressable>
+            <View style={styles.exploreText}>
+              <ThemedText style={styles.exploreTitle}>
+                Talk to ARYA
+              </ThemedText>
+              <ThemedText
+                style={[styles.exploreSub, { color: theme.textSecondary }]}
+              >
+                AI symptom checker and health assistant
+              </ThemedText>
+            </View>
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={theme.textSecondary}
+            />
+          </View>
+        </Card>
 
-        <Pressable
+        <Card
           onPress={() => navigation.navigate("WearableData")}
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          style={{ ...styles.exploreCard, marginBottom: Spacing.md }}
         >
-          <Card style={{ ...styles.exploreCard, marginBottom: Spacing.md }}>
-            <View style={styles.exploreRow}>
-              <View
-                style={[
-                  styles.exploreIcon,
-                  { backgroundColor: "#F59E0B15" },
-                ]}
-              >
-                <Feather name="activity" size={20} color="#F59E0B" />
-              </View>
-              <View style={styles.exploreText}>
-                <ThemedText style={styles.exploreTitle}>
-                  Add Vitals
-                </ThemedText>
-                <ThemedText
-                  style={[styles.exploreSub, { color: theme.textSecondary }]}
-                >
-                  Manually log your health readings
-                </ThemedText>
-              </View>
-              <Feather
-                name="chevron-right"
-                size={18}
-                color={theme.textSecondary}
-              />
+          <View style={styles.exploreRow}>
+            <View
+              style={[
+                styles.exploreIcon,
+                { backgroundColor: "#F59E0B15" },
+              ]}
+            >
+              <Feather name="activity" size={20} color="#F59E0B" />
             </View>
-          </Card>
-        </Pressable>
+            <View style={styles.exploreText}>
+              <ThemedText style={styles.exploreTitle}>
+                Add Vitals
+              </ThemedText>
+              <ThemedText
+                style={[styles.exploreSub, { color: theme.textSecondary }]}
+              >
+                Manually log your health readings
+              </ThemedText>
+            </View>
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={theme.textSecondary}
+            />
+          </View>
+        </Card>
       </ScrollView>
     </ThemedView>
   );
