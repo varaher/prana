@@ -867,6 +867,178 @@ Rules:
     }
   });
 
+  app.post("/api/user/:userId/health-trends/narrative", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { period = "month" } = req.body;
+
+      const periodDays: Record<string, number> = {
+        week: 7,
+        month: 30,
+        quarter: 90,
+        year: 365,
+      };
+
+      const days = periodDays[period] || 30;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const prevStartDate = new Date();
+      prevStartDate.setDate(prevStartDate.getDate() - days * 2);
+
+      const currentReadings = await db
+        .select()
+        .from(wearableReadings)
+        .where(and(eq(wearableReadings.userId, userId), gte(wearableReadings.recordedAt, startDate)))
+        .orderBy(desc(wearableReadings.recordedAt));
+
+      const previousReadings = await db
+        .select()
+        .from(wearableReadings)
+        .where(and(
+          eq(wearableReadings.userId, userId),
+          gte(wearableReadings.recordedAt, prevStartDate),
+          lte(wearableReadings.recordedAt, startDate)
+        ))
+        .orderBy(desc(wearableReadings.recordedAt));
+
+      if (currentReadings.length === 0) {
+        return res.status(400).json({ error: "No health data found for this period" });
+      }
+
+      const safeAvg = (arr: (number | null)[]) => {
+        const valid = arr.filter((v): v is number => v !== null && v !== undefined);
+        return valid.length > 0 ? valid.reduce((s, v) => s + v, 0) / valid.length : null;
+      };
+      const safeSum = (arr: (number | null)[]) => {
+        const valid = arr.filter((v): v is number => v !== null && v !== undefined);
+        return valid.length > 0 ? valid.reduce((s, v) => s + v, 0) : null;
+      };
+
+      const cur = {
+        heartRate: safeAvg(currentReadings.map(r => r.heartRate)),
+        hrv: safeAvg(currentReadings.map(r => r.heartRateVariability)),
+        spO2: safeAvg(currentReadings.map(r => r.bloodOxygenSaturation)),
+        bpSys: safeAvg(currentReadings.map(r => r.bloodPressureSystolic)),
+        bpDia: safeAvg(currentReadings.map(r => r.bloodPressureDiastolic)),
+        respRate: safeAvg(currentReadings.map(r => r.respiratoryRate)),
+        temp: safeAvg(currentReadings.map(r => r.bodyTemperature)),
+        steps: safeSum(currentReadings.map(r => r.steps)),
+        calories: safeSum(currentReadings.map(r => r.caloriesBurned)),
+        activeMin: safeSum(currentReadings.map(r => r.activeMinutes)),
+        sleepDur: safeAvg(currentReadings.map(r => r.sleepDuration)),
+        sleepQual: safeAvg(currentReadings.map(r => r.sleepQuality)),
+        stress: safeAvg(currentReadings.map(r => r.stressLevel)),
+        vo2: safeAvg(currentReadings.map(r => r.vo2Max)),
+        recovery: safeAvg(currentReadings.map(r => r.recoveryScore)),
+        count: currentReadings.length,
+      };
+
+      const prev = {
+        heartRate: safeAvg(previousReadings.map(r => r.heartRate)),
+        spO2: safeAvg(previousReadings.map(r => r.bloodOxygenSaturation)),
+        bpSys: safeAvg(previousReadings.map(r => r.bloodPressureSystolic)),
+        steps: safeSum(previousReadings.map(r => r.steps)),
+        sleepDur: safeAvg(previousReadings.map(r => r.sleepDuration)),
+        stress: safeAvg(previousReadings.map(r => r.stressLevel)),
+        count: previousReadings.length,
+      };
+
+      const periodLabel = period === "week" ? "past 7 days" : period === "month" ? "past 30 days" : period === "quarter" ? "past 3 months" : "past year";
+      const prevPeriodLabel = period === "week" ? "previous week" : period === "month" ? "previous month" : period === "quarter" ? "previous quarter" : "previous year";
+
+      const dataSummary = `
+HEALTH DATA for ${periodLabel} (${cur.count} readings):
+${cur.heartRate !== null ? `- Heart Rate: avg ${cur.heartRate.toFixed(0)} bpm` : ""}
+${cur.hrv !== null ? `- Heart Rate Variability: avg ${cur.hrv.toFixed(0)} ms` : ""}
+${cur.bpSys !== null && cur.bpDia !== null ? `- Blood Pressure: avg ${cur.bpSys.toFixed(0)}/${cur.bpDia.toFixed(0)} mmHg` : ""}
+${cur.spO2 !== null ? `- Blood Oxygen (SpO2): avg ${cur.spO2.toFixed(1)}%` : ""}
+${cur.respRate !== null ? `- Respiratory Rate: avg ${cur.respRate.toFixed(0)} breaths/min` : ""}
+${cur.temp !== null ? `- Body Temperature: avg ${cur.temp.toFixed(1)} F` : ""}
+${cur.steps !== null ? `- Total Steps: ${cur.steps.toLocaleString()}` : ""}
+${cur.calories !== null ? `- Total Calories Burned: ${cur.calories.toLocaleString()}` : ""}
+${cur.activeMin !== null ? `- Active Minutes: ${cur.activeMin}` : ""}
+${cur.sleepDur !== null ? `- Average Sleep: ${(cur.sleepDur / 60).toFixed(1)} hours` : ""}
+${cur.sleepQual !== null ? `- Sleep Quality: ${cur.sleepQual.toFixed(0)}/100` : ""}
+${cur.stress !== null ? `- Stress Level: ${cur.stress.toFixed(0)}/100` : ""}
+${cur.vo2 !== null ? `- VO2 Max: ${cur.vo2.toFixed(1)}` : ""}
+${cur.recovery !== null ? `- Recovery Score: ${cur.recovery.toFixed(0)}/100` : ""}
+
+${prev.count > 0 ? `COMPARISON DATA (${prevPeriodLabel}, ${prev.count} readings):
+${prev.heartRate !== null ? `- Heart Rate was: avg ${prev.heartRate.toFixed(0)} bpm` : ""}
+${prev.bpSys !== null ? `- Blood Pressure was: avg ${prev.bpSys.toFixed(0)} mmHg systolic` : ""}
+${prev.spO2 !== null ? `- SpO2 was: avg ${prev.spO2.toFixed(1)}%` : ""}
+${prev.steps !== null ? `- Steps were: ${prev.steps.toLocaleString()}` : ""}
+${prev.sleepDur !== null ? `- Sleep was: ${(prev.sleepDur / 60).toFixed(1)} hours avg` : ""}
+${prev.stress !== null ? `- Stress was: ${prev.stress.toFixed(0)}/100` : ""}` : "No comparison data available from the previous period."}
+`.trim();
+
+      const narrativePrompt = `You are a caring, knowledgeable health narrator for ErPrana, a personal health app. Your job is to write a natural language health trend narrative that reads like a friendly doctor explaining results to a patient - similar to how a hospital discharge summary tells a patient's story, but adapted for everyday health monitoring.
+
+Write for a LAYPERSON - no medical jargon. Use warm, conversational language. Be specific about the numbers but explain what they mean in plain terms.
+
+${dataSummary}
+
+Generate a JSON response with this exact structure:
+{
+  "healthStory": "A 3-4 paragraph narrative that tells the user's health story for this period. Start with an overall picture ('Over the past month, your body has been telling an interesting story...'). Mention specific numbers but always explain what they mean in everyday language. Compare to the previous period if data is available. End with an encouraging forward-looking sentence.",
+  "keyInsights": [
+    {
+      "title": "Short title (2-4 words)",
+      "description": "1-2 sentence explanation in plain language about what this means for the user",
+      "type": "positive|neutral|concern"
+    }
+  ],
+  "areasToWatch": [
+    {
+      "title": "Short title",
+      "description": "Why this matters and a simple action step",
+      "priority": "low|medium|high"
+    }
+  ],
+  "wellnessScore": {
+    "score": 0-100,
+    "label": "A word like 'Good', 'Very Good', 'Needs Attention', 'Excellent'",
+    "explanation": "One sentence explaining the score in everyday terms"
+  },
+  "actionPlan": [
+    "Simple, specific action the user can take today (e.g., 'Try adding a 15-minute walk after dinner')"
+  ]
+}
+
+IMPORTANT RULES:
+- Write as if talking to a friend, not writing a medical report
+- Always explain what numbers mean (e.g., "Your heart rate averaged 72 bpm - that's right in the sweet spot for a healthy resting heart rate")
+- If comparing periods, use phrases like "compared to last month" not "vs previous period"
+- Keep keyInsights to 3-5 items
+- Keep areasToWatch to 1-3 items (only genuine concerns, not filler)
+- Keep actionPlan to 2-4 items
+- Never use medical abbreviations without explaining them
+- Be honest but always encouraging - find the positive even when noting concerns`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: narrativePrompt }],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 2048,
+        temperature: 0.7,
+      });
+
+      const narrative = JSON.parse(response.choices[0].message.content || "{}");
+
+      res.json({
+        period,
+        periodLabel,
+        readingCount: cur.count,
+        narrative,
+        metrics: cur,
+      });
+    } catch (error) {
+      console.error("Error generating health trend narrative:", error);
+      res.status(500).json({ error: "Failed to generate health trend narrative" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
