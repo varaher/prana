@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, Pressable, Image } from "react-native";
+import { View, StyleSheet, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -11,40 +11,17 @@ import { ThemedView } from "@/components/ThemedView";
 import { Card } from "@/components/Card";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/hooks/useAuth";
-import { Colors, Spacing, BorderRadius, Typography } from "@/constants/theme";
+import { Spacing, BorderRadius, Typography } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useCheckinSettings } from "@/hooks/useCheckinSettings";
 
-function MetricCard({
-  title,
-  value,
-  unit,
-  icon,
-  color,
-}: {
-  title: string;
-  value: string;
-  unit: string;
+interface QuickAction {
   icon: keyof typeof Feather.glyphMap;
+  label: string;
   color: string;
-}) {
-  const { theme } = useTheme();
-
-  return (
-    <Card style={styles.metricCard}>
-      <View style={[styles.metricIcon, { backgroundColor: color + "20" }]}>
-        <Feather name={icon} size={20} color={color} />
-      </View>
-      <ThemedText style={[styles.metricValue, { color }]}>{value}</ThemedText>
-      <ThemedText style={[styles.metricUnit, { color: theme.textSecondary }]}>
-        {unit}
-      </ThemedText>
-      <ThemedText style={[styles.metricTitle, { color: theme.textSecondary }]}>
-        {title}
-      </ThemedText>
-    </Card>
-  );
+  bg: string;
+  route: keyof RootStackParamList;
 }
 
 export default function DashboardScreen() {
@@ -52,7 +29,8 @@ export default function DashboardScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { user } = useAuth();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { settings: checkinSettings, formatTime } = useCheckinSettings();
   useNotifications(checkinSettings);
 
@@ -63,22 +41,46 @@ export default function DashboardScreen() {
     return "Good evening";
   };
 
-  const handleSOS = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    navigation.navigate("SOS");
-  };
+  const quickActions: QuickAction[] = [
+    {
+      icon: "watch",
+      label: "Wearable\nData",
+      color: "#F59E0B",
+      bg: "#F59E0B15",
+      route: "WearableData",
+    },
+    {
+      icon: "bar-chart-2",
+      label: "Health\nReports",
+      color: "#8B5CF6",
+      bg: "#8B5CF615",
+      route: "HealthReport",
+    },
+    {
+      icon: "camera",
+      label: "Visual\nAssessment",
+      color: "#EC4899",
+      bg: "#EC489915",
+      route: "VisualAssessment",
+    },
+    {
+      icon: "sun",
+      label: "Alternative\nRemedies",
+      color: "#10B981",
+      bg: "#10B98115",
+      route: "AlternativeMedicine",
+    },
+  ];
 
   return (
     <ThemedView style={styles.container}>
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top + Spacing.lg },
-        ]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
         <View style={styles.headerLeft}>
-          <ThemedText style={styles.greeting}>
-            {getGreeting()}, {user?.name?.split(" ")[0] || "User"}
+          <ThemedText style={[styles.greeting, { color: theme.textSecondary }]}>
+            {getGreeting()}
+          </ThemedText>
+          <ThemedText style={styles.userName}>
+            {user?.name?.split(" ")[0] || "User"}
           </ThemedText>
         </View>
         <Pressable
@@ -86,9 +88,13 @@ export default function DashboardScreen() {
             styles.sosButton,
             { opacity: pressed ? 0.8 : 1 },
           ]}
-          onPress={handleSOS}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            navigation.navigate("SOS");
+          }}
         >
-          <Feather name="alert-triangle" size={20} color="#FFFFFF" />
+          <Feather name="alert-triangle" size={18} color="#FFFFFF" />
+          <ThemedText style={styles.sosLabel}>SOS</ThemedText>
         </Pressable>
       </View>
 
@@ -100,239 +106,187 @@ export default function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Card
-          style={styles.checkinCard}
-          onPress={() => navigation.navigate("Arya", { mode: "checkin" })}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            navigation.navigate("Arya", { mode: "checkin" });
+          }}
         >
-          <View style={styles.syncContent}>
-            <View style={[styles.checkinIconWrap, { backgroundColor: theme.primary + "15" }]}>
-              <Feather name="message-circle" size={24} color={theme.primary} />
-            </View>
-            <View style={styles.syncTextContainer}>
-              <ThemedText style={styles.syncTitle}>
-                Daily Health Check-in
-              </ThemedText>
-              <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
-                {checkinSettings.enabled
-                  ? `Scheduled at ${formatTime(checkinSettings.primaryTime)}`
-                  : "Let ARYA record your vitals today"}
-              </ThemedText>
-            </View>
-          </View>
-          <View style={styles.syncFooter}>
-            <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
-              Start check-in with ARYA
-            </ThemedText>
-            <Feather name="chevron-right" size={18} color={theme.primary} />
-          </View>
-        </Card>
-
-        <Pressable onPress={() => navigation.navigate("HealthReports")}>
-          <Card style={styles.healthScoreCard}>
-            <View style={styles.healthScoreHeader}>
-              <ThemedText style={styles.healthScoreTitle}>
-                Today's Health Score
-              </ThemedText>
-              <View style={[styles.trendBadge, { backgroundColor: theme.success + "20" }]}>
-                <Feather name="trending-up" size={14} color={theme.success} />
-                <ThemedText style={[styles.trendText, { color: theme.success }]}>
-                  +5%
+          <Card style={{ ...styles.checkinCard, borderColor: theme.primary + "30" }}>
+            <View style={styles.checkinTop}>
+              <View
+                style={[
+                  styles.checkinIcon,
+                  { backgroundColor: theme.primary + "12" },
+                ]}
+              >
+                <Feather
+                  name="message-circle"
+                  size={22}
+                  color={theme.primary}
+                />
+              </View>
+              <View style={styles.checkinText}>
+                <ThemedText style={styles.checkinTitle}>
+                  Daily Health Check-in
+                </ThemedText>
+                <ThemedText
+                  style={[styles.checkinSub, { color: theme.textSecondary }]}
+                >
+                  {checkinSettings.enabled
+                    ? `Scheduled at ${formatTime(checkinSettings.primaryTime)}`
+                    : "Let ARYA record your vitals today"}
                 </ThemedText>
               </View>
             </View>
-            <View style={styles.healthScoreValue}>
-              <ThemedText style={[styles.scoreNumber, { color: theme.success }]}>
-                85
+            <View
+              style={[styles.checkinBtn, { backgroundColor: theme.primary }]}
+            >
+              <ThemedText style={styles.checkinBtnText}>
+                Start Check-in
               </ThemedText>
-              <ThemedText style={[styles.scoreMax, { color: theme.textSecondary }]}>
-                /100
-              </ThemedText>
-            </View>
-            <View style={styles.healthScoreFooter}>
-              <ThemedText style={[styles.healthScoreDesc, { color: theme.textSecondary }]}>
-                Your vitals are looking great today!
-              </ThemedText>
-              <View style={styles.viewReportsButton}>
-                <ThemedText style={[styles.viewReportsText, { color: theme.primary }]}>
-                  View Reports
-                </ThemedText>
-                <Feather name="chevron-right" size={16} color={theme.primary} />
-              </View>
+              <Feather name="arrow-right" size={16} color="#FFFFFF" />
             </View>
           </Card>
         </Pressable>
 
-        <Pressable onPress={() => navigation.navigate("WearableData")}>
-          <Card style={styles.syncCard}>
-            <View style={styles.syncContent}>
-              <View style={[styles.syncIcon, { backgroundColor: theme.warning + "20" }]}>
-                <Feather name="watch" size={24} color={theme.warning} />
-              </View>
-              <View style={styles.syncTextContainer}>
-                <ThemedText style={styles.syncTitle}>Wearable Health Data</ThemedText>
-                <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
-                  View and sync your device metrics
+        <ThemedText
+          style={[styles.sectionLabel, { color: theme.textSecondary }]}
+        >
+          QUICK ACTIONS
+        </ThemedText>
+        <View style={styles.actionsGrid}>
+          {quickActions.map((action) => (
+            <Pressable
+              key={action.label}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, flex: 1 })}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                navigation.navigate(action.route);
+              }}
+            >
+              <Card style={styles.actionCard}>
+                <View
+                  style={[
+                    styles.actionIcon,
+                    { backgroundColor: action.bg },
+                  ]}
+                >
+                  <Feather name={action.icon} size={22} color={action.color} />
+                </View>
+                <ThemedText style={styles.actionLabel}>
+                  {action.label}
                 </ThemedText>
-              </View>
-            </View>
-            <View style={styles.syncFooter}>
-              <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
-                Add or view readings
-              </ThemedText>
-              <Feather name="chevron-right" size={18} color={theme.primary} />
-            </View>
-          </Card>
-        </Pressable>
-
-        <Pressable onPress={() => navigation.navigate("HealthReport")}>
-          <Card style={styles.reportCard}>
-            <View style={styles.syncContent}>
-              <View style={[styles.syncIcon, { backgroundColor: theme.primary + "20" }]}>
-                <Feather name="file-text" size={24} color={theme.primary} />
-              </View>
-              <View style={styles.syncTextContainer}>
-                <ThemedText style={styles.syncTitle}>AI Health Reports</ThemedText>
-                <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
-                  Get personalized insights from your data
-                </ThemedText>
-              </View>
-            </View>
-            <View style={styles.syncFooter}>
-              <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
-                Generate report
-              </ThemedText>
-              <Feather name="chevron-right" size={18} color={theme.primary} />
-            </View>
-          </Card>
-        </Pressable>
-
-        <Pressable onPress={() => navigation.navigate("VisualAssessment")}>
-          <Card style={styles.reportCard}>
-            <View style={styles.syncContent}>
-              <View style={[styles.syncIcon, { backgroundColor: theme.danger + "20" }]}>
-                <Feather name="camera" size={24} color={theme.danger} />
-              </View>
-              <View style={styles.syncTextContainer}>
-                <ThemedText style={styles.syncTitle}>Visual Assessment</ThemedText>
-                <ThemedText style={[styles.syncDesc, { color: theme.textSecondary }]}>
-                  AI-powered patient visual analysis
-                </ThemedText>
-              </View>
-            </View>
-            <View style={styles.syncFooter}>
-              <ThemedText style={[styles.syncFooterText, { color: theme.primary }]}>
-                Take photo for analysis
-              </ThemedText>
-              <Feather name="chevron-right" size={18} color={theme.primary} />
-            </View>
-          </Card>
-        </Pressable>
-
-        <ThemedText style={styles.sectionTitle}>Your Vitals</ThemedText>
-        <View style={styles.metricsGrid}>
-          <MetricCard
-            title="Heart Rate"
-            value="72"
-            unit="bpm"
-            icon="heart"
-            color={Colors.light.danger}
-          />
-          <MetricCard
-            title="Steps"
-            value="8,432"
-            unit="steps"
-            icon="activity"
-            color={Colors.light.primary}
-          />
-          <MetricCard
-            title="Sleep"
-            value="7.5"
-            unit="hours"
-            icon="moon"
-            color={Colors.light.primaryDark}
-          />
-          <MetricCard
-            title="Calories"
-            value="1,840"
-            unit="kcal"
-            icon="zap"
-            color={Colors.light.warning}
-          />
+              </Card>
+            </Pressable>
+          ))}
         </View>
 
-        <ThemedText style={styles.sectionTitle}>Today's Medications</ThemedText>
-        <Card style={styles.medicationCard}>
-          <View style={styles.medicationItem}>
-            <View style={[styles.medicationIcon, { backgroundColor: theme.success + "20" }]}>
-              <Feather name="check-circle" size={20} color={theme.success} />
-            </View>
-            <View style={styles.medicationInfo}>
-              <ThemedText style={styles.medicationName}>Vitamin D</ThemedText>
-              <ThemedText style={[styles.medicationTime, { color: theme.textSecondary }]}>
-                8:00 AM - Taken
-              </ThemedText>
-            </View>
-          </View>
-          <View style={styles.medicationDivider} />
-          <View style={styles.medicationItem}>
-            <View style={[styles.medicationIcon, { backgroundColor: theme.warning + "20" }]}>
-              <Feather name="clock" size={20} color={theme.warning} />
-            </View>
-            <View style={styles.medicationInfo}>
-              <ThemedText style={styles.medicationName}>Omega-3</ThemedText>
-              <ThemedText style={[styles.medicationTime, { color: theme.textSecondary }]}>
-                2:00 PM - Upcoming
-              </ThemedText>
-            </View>
-          </View>
-        </Card>
+        <ThemedText
+          style={[styles.sectionLabel, { color: theme.textSecondary }]}
+        >
+          EXPLORE
+        </ThemedText>
 
-        <ThemedText style={styles.sectionTitle}>Recent ARYA Insights</ThemedText>
-        <Card style={styles.insightCard}>
-          <View style={styles.insightHeader}>
-            <View style={[styles.insightIcon, { backgroundColor: theme.primary + "20" }]}>
-              <Feather name="message-circle" size={20} color={theme.primary} />
-            </View>
-            <ThemedText style={[styles.insightDate, { color: theme.textSecondary }]}>
-              Today, 9:30 AM
-            </ThemedText>
-          </View>
-          <ThemedText style={styles.insightText}>
-            Based on your symptoms, I recommend staying hydrated and resting. 
-            Your vitals look stable.
-          </ThemedText>
-          <Pressable
-            style={({ pressed }) => [
-              styles.insightButton,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}
-            onPress={() => navigation.navigate("Arya")}
-          >
-            <ThemedText style={[styles.insightButtonText, { color: theme.primary }]}>
-              Continue Conversation
-            </ThemedText>
-            <Feather name="arrow-right" size={16} color={theme.primary} />
-          </Pressable>
-        </Card>
-
-        <Pressable onPress={() => navigation.navigate("AlternativeMedicine")}>
-          <Card style={styles.alternativeCard}>
-            <View style={styles.alternativeContent}>
-              <View style={[styles.alternativeIcon, { backgroundColor: Colors.light.success + "20" }]}>
-                <Feather name="sun" size={24} color={Colors.light.success} />
+        <Pressable
+          onPress={() => navigation.navigate("HealthReports")}
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          <Card style={styles.exploreCard}>
+            <View style={styles.exploreRow}>
+              <View
+                style={[
+                  styles.exploreIcon,
+                  { backgroundColor: "#6366F115" },
+                ]}
+              >
+                <Feather name="trending-up" size={20} color="#6366F1" />
               </View>
-              <View style={styles.alternativeTextContainer}>
-                <ThemedText style={styles.alternativeTitle}>Alternative Remedies</ThemedText>
-                <ThemedText style={[styles.alternativeDesc, { color: theme.textSecondary }]}>
-                  Explore natural treatments used by others
+              <View style={styles.exploreText}>
+                <ThemedText style={styles.exploreTitle}>
+                  Health Trends
+                </ThemedText>
+                <ThemedText
+                  style={[styles.exploreSub, { color: theme.textSecondary }]}
+                >
+                  Track your health score over time
                 </ThemedText>
               </View>
+              <Feather
+                name="chevron-right"
+                size={18}
+                color={theme.textSecondary}
+              />
             </View>
-            <View style={styles.alternativeFooter}>
-              <ThemedText style={[styles.alternativeHighlight, { color: theme.success }]}>
-                Community-ranked recommendations
-              </ThemedText>
-              <Feather name="chevron-right" size={18} color={theme.primary} />
+          </Card>
+        </Pressable>
+
+        <Pressable
+          onPress={() => navigation.navigate("Arya")}
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          <Card style={styles.exploreCard}>
+            <View style={styles.exploreRow}>
+              <View
+                style={[
+                  styles.exploreIcon,
+                  { backgroundColor: theme.primary + "12" },
+                ]}
+              >
+                <Feather
+                  name="message-circle"
+                  size={20}
+                  color={theme.primary}
+                />
+              </View>
+              <View style={styles.exploreText}>
+                <ThemedText style={styles.exploreTitle}>
+                  Talk to ARYA
+                </ThemedText>
+                <ThemedText
+                  style={[styles.exploreSub, { color: theme.textSecondary }]}
+                >
+                  AI symptom checker and health assistant
+                </ThemedText>
+              </View>
+              <Feather
+                name="chevron-right"
+                size={18}
+                color={theme.textSecondary}
+              />
+            </View>
+          </Card>
+        </Pressable>
+
+        <Pressable
+          onPress={() => navigation.navigate("WearableData")}
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          <Card style={{ ...styles.exploreCard, marginBottom: Spacing.md }}>
+            <View style={styles.exploreRow}>
+              <View
+                style={[
+                  styles.exploreIcon,
+                  { backgroundColor: "#F59E0B15" },
+                ]}
+              >
+                <Feather name="activity" size={20} color="#F59E0B" />
+              </View>
+              <View style={styles.exploreText}>
+                <ThemedText style={styles.exploreTitle}>
+                  Add Vitals
+                </ThemedText>
+                <ThemedText
+                  style={[styles.exploreSub, { color: theme.textSecondary }]}
+                >
+                  Manually log your health readings
+                </ThemedText>
+              </View>
+              <Feather
+                name="chevron-right"
+                size={18}
+                color={theme.textSecondary}
+              />
             </View>
           </Card>
         </Pressable>
@@ -348,7 +302,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-end",
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.lg,
   },
@@ -356,16 +310,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    ...Typography.h3,
-    marginBottom: Spacing.xs,
+    ...Typography.small,
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  userName: {
+    ...Typography.h2,
   },
   sosButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.light.danger,
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    paddingHorizontal: Spacing.lg,
+    height: 40,
+    borderRadius: BorderRadius.full,
+    backgroundColor: "#EF4444",
+  },
+  sosLabel: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   scrollView: {
     flex: 1,
@@ -373,85 +338,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: Spacing.xl,
   },
-  healthScoreCard: {
-    marginBottom: Spacing.lg,
-    padding: Spacing.xl,
-  },
-  healthScoreHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  healthScoreTitle: {
-    ...Typography.body,
-    fontWeight: "600",
-  },
-  trendBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-    gap: 4,
-  },
-  trendText: {
-    ...Typography.caption,
-    fontWeight: "600",
-  },
-  healthScoreValue: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    marginBottom: Spacing.sm,
-  },
-  scoreNumber: {
-    fontSize: 48,
-    fontWeight: "700",
-  },
-  scoreMax: {
-    ...Typography.h4,
-    marginLeft: 4,
-  },
-  healthScoreDesc: {
-    ...Typography.small,
-    flex: 1,
-  },
-  healthScoreFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  viewReportsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  viewReportsText: {
-    ...Typography.small,
-    fontWeight: "600",
-  },
   checkinCard: {
-    marginBottom: Spacing.lg,
-    padding: Spacing.lg,
+    padding: Spacing.xl,
+    marginBottom: Spacing["2xl"],
     borderWidth: 1,
   },
-  checkinIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: Spacing.md,
-  },
-  syncCard: {
-    marginBottom: Spacing.xl,
-    padding: Spacing.lg,
-  },
-  syncContent: {
+  checkinTop: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: Spacing.lg,
   },
-  syncIcon: {
+  checkinIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -459,83 +356,71 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: Spacing.md,
   },
-  syncTextContainer: {
+  checkinText: {
     flex: 1,
   },
-  syncTitle: {
+  checkinTitle: {
     ...Typography.body,
-    fontWeight: "600",
+    fontWeight: "700",
     marginBottom: 2,
   },
-  syncDesc: {
+  checkinSub: {
     ...Typography.small,
   },
-  syncButton: {
-    height: 40,
+  checkinBtn: {
+    flexDirection: "row",
+    height: 44,
     borderRadius: BorderRadius.sm,
     justifyContent: "center",
     alignItems: "center",
+    gap: Spacing.sm,
   },
-  syncButtonText: {
+  checkinBtnText: {
     color: "#FFFFFF",
     ...Typography.body,
     fontWeight: "600",
   },
-  syncFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  syncFooterText: {
-    ...Typography.small,
-    fontWeight: "600",
-  },
-  reportCard: {
-    marginBottom: Spacing.xl,
-    padding: Spacing.lg,
-  },
-  sectionTitle: {
-    ...Typography.h4,
+  sectionLabel: {
+    ...Typography.caption,
+    fontWeight: "700",
+    letterSpacing: 0.8,
     marginBottom: Spacing.md,
+    marginLeft: Spacing.xs,
   },
-  metricsGrid: {
+  actionsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: Spacing.md,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing["2xl"],
   },
-  metricCard: {
-    width: "47%",
+  actionCard: {
     padding: Spacing.lg,
     alignItems: "center",
   },
-  metricIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  actionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: Spacing.sm,
   },
-  metricValue: {
-    ...Typography.metric,
-  },
-  metricUnit: {
+  actionLabel: {
     ...Typography.caption,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 16,
   },
-  metricTitle: {
-    ...Typography.small,
-    marginTop: Spacing.xs,
+  exploreCard: {
+    padding: 0,
+    marginBottom: Spacing.md,
+    overflow: "hidden",
   },
-  medicationCard: {
-    marginBottom: Spacing.xl,
-    padding: Spacing.lg,
-  },
-  medicationItem: {
+  exploreRow: {
     flexDirection: "row",
     alignItems: "center",
+    padding: Spacing.lg,
   },
-  medicationIcon: {
+  exploreIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -543,89 +428,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: Spacing.md,
   },
-  medicationInfo: {
+  exploreText: {
     flex: 1,
   },
-  medicationName: {
-    ...Typography.body,
-    fontWeight: "600",
-  },
-  medicationTime: {
-    ...Typography.small,
-  },
-  medicationDivider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginVertical: Spacing.md,
-  },
-  insightCard: {
-    marginBottom: Spacing.xl,
-    padding: Spacing.lg,
-  },
-  insightHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  insightIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: Spacing.sm,
-  },
-  insightDate: {
-    ...Typography.caption,
-  },
-  insightText: {
-    ...Typography.body,
-    marginBottom: Spacing.lg,
-  },
-  insightButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-  },
-  insightButtonText: {
-    ...Typography.body,
-    fontWeight: "600",
-  },
-  alternativeCard: {
-    marginBottom: Spacing.xl,
-    padding: Spacing.lg,
-  },
-  alternativeContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.lg,
-  },
-  alternativeIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: Spacing.md,
-  },
-  alternativeTextContainer: {
-    flex: 1,
-  },
-  alternativeTitle: {
+  exploreTitle: {
     ...Typography.body,
     fontWeight: "600",
     marginBottom: 2,
   },
-  alternativeDesc: {
-    ...Typography.small,
-  },
-  alternativeFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  alternativeHighlight: {
-    ...Typography.small,
-    fontWeight: "500",
+  exploreSub: {
+    ...Typography.caption,
   },
 });
