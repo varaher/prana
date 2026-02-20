@@ -1,117 +1,147 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Card } from "@/components/Card";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors, Spacing, BorderRadius, Typography } from "@/constants/theme";
+import { getApiUrl, apiRequest } from "@/lib/query-client";
 
 type TimePeriod = "week" | "month" | "quarter" | "year";
+
+interface InsightItem {
+  title: string;
+  description: string;
+  type: "positive" | "neutral" | "concern";
+}
+
+interface WatchItem {
+  title: string;
+  description: string;
+  priority: "low" | "medium" | "high";
+}
+
+interface WellnessScore {
+  score: number;
+  label: string;
+  explanation: string;
+}
+
+interface NarrativeResponse {
+  period: string;
+  periodLabel: string;
+  readingCount: number;
+  narrative: {
+    healthStory: string;
+    keyInsights: InsightItem[];
+    areasToWatch: WatchItem[];
+    wellnessScore: WellnessScore;
+    actionPlan: string[];
+  };
+}
 
 interface WearableReading {
   id: number;
   userId: string;
   recordedAt: string;
   heartRate: number | null;
-  heartRateVariability: number | null;
-  bloodOxygenSaturation: number | null;
+  steps: number | null;
+  sleepDuration: number | null;
+  caloriesBurned: number | null;
   bloodPressureSystolic: number | null;
   bloodPressureDiastolic: number | null;
-  respiratoryRate: number | null;
-  bodyTemperature: number | null;
-  steps: number | null;
-  caloriesBurned: number | null;
-  activeMinutes: number | null;
-  sleepDuration: number | null;
-  sleepQuality: number | null;
+  bloodOxygenSaturation: number | null;
   stressLevel: number | null;
-  vo2Max: number | null;
-  recoveryScore: number | null;
-  deviceType: string | null;
 }
 
-interface AggregatedMetrics {
-  avgHeartRate: number | null;
-  totalSteps: number | null;
-  avgSleep: number | null;
-  totalCalories: number | null;
-  avgBpSystolic: number | null;
-  avgBpDiastolic: number | null;
-  avgStress: number | null;
-  avgSpO2: number | null;
-  readingCount: number;
-}
-
-const PERIODS: { key: TimePeriod; label: string; days: number }[] = [
-  { key: "week", label: "7 Days", days: 7 },
-  { key: "month", label: "30 Days", days: 30 },
-  { key: "quarter", label: "90 Days", days: 90 },
-  { key: "year", label: "1 Year", days: 365 },
+const PERIODS: { key: TimePeriod; label: string }[] = [
+  { key: "week", label: "7 Days" },
+  { key: "month", label: "30 Days" },
+  { key: "quarter", label: "90 Days" },
+  { key: "year", label: "1 Year" },
 ];
 
-function avg(values: (number | null)[]): number | null {
-  const valid = values.filter((v): v is number => v !== null && v !== undefined);
-  if (valid.length === 0) return null;
-  return Math.round(valid.reduce((s, v) => s + v, 0) / valid.length);
-}
+function WellnessScoreRing({ score, label, explanation, theme }: WellnessScore & { theme: any }) {
+  const getScoreColor = (s: number) => {
+    if (s >= 80) return Colors.light.success;
+    if (s >= 60) return Colors.light.primary;
+    if (s >= 40) return Colors.light.warning;
+    return Colors.light.danger;
+  };
 
-function sum(values: (number | null)[]): number | null {
-  const valid = values.filter((v): v is number => v !== null && v !== undefined);
-  if (valid.length === 0) return null;
-  return valid.reduce((s, v) => s + v, 0);
-}
-
-function MetricRow({
-  icon,
-  label,
-  value,
-  unit,
-  color,
-  trend,
-}: {
-  icon: keyof typeof Feather.glyphMap;
-  label: string;
-  value: string | number | null;
-  unit: string;
-  color: string;
-  trend?: "up" | "down" | "stable" | null;
-}) {
-  const { theme } = useTheme();
+  const color = getScoreColor(score);
 
   return (
-    <View style={[styles.metricRow, { borderBottomColor: theme.borderLight }]}>
-      <View style={[styles.metricIcon, { backgroundColor: color + "15" }]}>
-        <Feather name={icon} size={18} color={color} />
-      </View>
-      <View style={styles.metricInfo}>
-        <ThemedText style={[styles.metricLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
-        <View style={styles.metricValueRow}>
-          <ThemedText style={styles.metricValue}>{value !== null ? value : "--"}</ThemedText>
-          <ThemedText style={[styles.metricUnit, { color: theme.textSecondary }]}>{unit}</ThemedText>
+    <Card style={styles.scoreCard}>
+      <View style={styles.scoreContent}>
+        <View style={[styles.scoreRing, { borderColor: color }]}>
+          <ThemedText style={[styles.scoreNumber, { color }]}>{score}</ThemedText>
+          <ThemedText style={[styles.scoreOutOf, { color: theme.textSecondary }]}>/100</ThemedText>
+        </View>
+        <View style={styles.scoreInfo}>
+          <View style={[styles.scoreLabelBadge, { backgroundColor: color + "18" }]}>
+            <ThemedText style={[styles.scoreLabelText, { color }]}>{label}</ThemedText>
+          </View>
+          <ThemedText style={[styles.scoreExplanation, { color: theme.textSecondary }]}>
+            {explanation}
+          </ThemedText>
         </View>
       </View>
-      {trend ? (
-        <View
-          style={[
-            styles.trendIcon,
-            {
-              backgroundColor:
-                trend === "up" ? Colors.light.success + "20" : trend === "down" ? Colors.light.danger + "20" : theme.borderLight,
-            },
-          ]}
-        >
-          <Feather
-            name={trend === "up" ? "trending-up" : trend === "down" ? "trending-down" : "minus"}
-            size={14}
-            color={trend === "up" ? Colors.light.success : trend === "down" ? Colors.light.danger : theme.textSecondary}
-          />
-        </View>
-      ) : null}
+    </Card>
+  );
+}
+
+function InsightCard({ item, theme }: { item: InsightItem; theme: any }) {
+  const getConfig = (type: string) => {
+    switch (type) {
+      case "positive":
+        return { icon: "check-circle" as const, color: Colors.light.success, bg: Colors.light.success + "12" };
+      case "concern":
+        return { icon: "alert-circle" as const, color: Colors.light.warning, bg: Colors.light.warning + "12" };
+      default:
+        return { icon: "info" as const, color: Colors.light.primary, bg: Colors.light.primary + "12" };
+    }
+  };
+
+  const config = getConfig(item.type);
+
+  return (
+    <View style={[styles.insightItem, { borderBottomColor: theme.borderLight }]}>
+      <View style={[styles.insightIcon, { backgroundColor: config.bg }]}>
+        <Feather name={config.icon} size={16} color={config.color} />
+      </View>
+      <View style={styles.insightText}>
+        <ThemedText style={styles.insightTitle}>{item.title}</ThemedText>
+        <ThemedText style={[styles.insightDesc, { color: theme.textSecondary }]}>
+          {item.description}
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+function WatchCard({ item, theme }: { item: WatchItem; theme: any }) {
+  const getPriorityColor = (p: string) => {
+    switch (p) {
+      case "high": return Colors.light.danger;
+      case "medium": return Colors.light.warning;
+      default: return Colors.light.primary;
+    }
+  };
+
+  const color = getPriorityColor(item.priority);
+
+  return (
+    <View style={[styles.watchItem, { borderLeftColor: color }]}>
+      <ThemedText style={styles.watchTitle}>{item.title}</ThemedText>
+      <ThemedText style={[styles.watchDesc, { color: theme.textSecondary }]}>
+        {item.description}
+      </ThemedText>
     </View>
   );
 }
@@ -122,77 +152,35 @@ export default function HealthReportsScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("month");
+  const [narrativeData, setNarrativeData] = useState<NarrativeResponse | null>(null);
 
-  const { data: readings = [], isLoading } = useQuery<WearableReading[]>({
+  const { data: readings = [], isLoading: readingsLoading } = useQuery<WearableReading[]>({
     queryKey: ["/api/user", user?.id, "wearable-readings"],
     enabled: !!user?.id,
   });
 
-  const periodConfig = PERIODS.find((p) => p.key === selectedPeriod)!;
+  const hasData = readings.length > 0;
 
-  const { current, previous } = useMemo(() => {
-    const now = Date.now();
-    const periodMs = periodConfig.days * 24 * 60 * 60 * 1000;
+  const narrativeMutation = useMutation({
+    mutationFn: async (period: TimePeriod) => {
+      const url = new URL(`/api/user/${user?.id}/health-trends/narrative`, getApiUrl());
+      const res = await apiRequest("POST", url.toString(), { period });
+      return res.json();
+    },
+    onSuccess: (data: NarrativeResponse) => {
+      setNarrativeData(data);
+    },
+  });
 
-    const currentReadings = readings.filter((r) => {
-      const t = new Date(r.recordedAt).getTime();
-      return t >= now - periodMs;
-    });
-
-    const previousReadings = readings.filter((r) => {
-      const t = new Date(r.recordedAt).getTime();
-      return t >= now - periodMs * 2 && t < now - periodMs;
-    });
-
-    const aggregate = (data: WearableReading[]): AggregatedMetrics => ({
-      avgHeartRate: avg(data.map((r) => r.heartRate)),
-      totalSteps: sum(data.map((r) => r.steps)),
-      avgSleep: avg(data.map((r) => (r.sleepDuration ? +(r.sleepDuration / 60).toFixed(1) : null))),
-      totalCalories: sum(data.map((r) => r.caloriesBurned)),
-      avgBpSystolic: avg(data.map((r) => r.bloodPressureSystolic)),
-      avgBpDiastolic: avg(data.map((r) => r.bloodPressureDiastolic)),
-      avgStress: avg(data.map((r) => r.stressLevel)),
-      avgSpO2: avg(data.map((r) => r.bloodOxygenSaturation)),
-      readingCount: data.length,
-    });
-
-    return {
-      current: aggregate(currentReadings),
-      previous: aggregate(previousReadings),
-    };
-  }, [readings, periodConfig]);
-
-  const getTrend = (cur: number | null, prev: number | null): "up" | "down" | "stable" | null => {
-    if (cur === null || prev === null) return null;
-    const diff = cur - prev;
-    if (Math.abs(diff) < 0.05 * prev) return "stable";
-    return diff > 0 ? "up" : "down";
+  const handleGenerateNarrative = () => {
+    setNarrativeData(null);
+    narrativeMutation.mutate(selectedPeriod);
   };
 
-  const dayReadings = useMemo(() => {
-    const now = Date.now();
-    const periodMs = periodConfig.days * 24 * 60 * 60 * 1000;
-    const filtered = readings.filter((r) => new Date(r.recordedAt).getTime() >= now - periodMs);
-
-    const grouped: { [key: string]: WearableReading[] } = {};
-    filtered.forEach((r) => {
-      const d = new Date(r.recordedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      if (!grouped[d]) grouped[d] = [];
-      grouped[d].push(r);
-    });
-
-    return Object.entries(grouped)
-      .map(([date, items]) => ({
-        date,
-        heartRate: avg(items.map((i) => i.heartRate)),
-        steps: sum(items.map((i) => i.steps)),
-        sleep: avg(items.map((i) => (i.sleepDuration ? +(i.sleepDuration / 60).toFixed(1) : null))),
-        calories: sum(items.map((i) => i.caloriesBurned)),
-      }))
-      .slice(0, 10);
-  }, [readings, periodConfig]);
-
-  const hasData = readings.length > 0;
+  const handlePeriodChange = (period: TimePeriod) => {
+    setSelectedPeriod(period);
+    setNarrativeData(null);
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -209,7 +197,7 @@ export default function HealthReportsScreen() {
           <Pressable
             key={key}
             style={[styles.periodButton, selectedPeriod === key && { backgroundColor: theme.primary }]}
-            onPress={() => setSelectedPeriod(key)}
+            onPress={() => handlePeriodChange(key)}
           >
             <ThemedText style={[styles.periodButtonText, { color: selectedPeriod === key ? "#FFFFFF" : theme.textSecondary }]}>
               {label}
@@ -218,141 +206,159 @@ export default function HealthReportsScreen() {
         ))}
       </View>
 
-      {isLoading ? (
+      {readingsLoading ? (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
       ) : !hasData ? (
         <View style={styles.emptyState}>
           <View style={[styles.emptyIcon, { backgroundColor: theme.primary + "12" }]}>
-            <Feather name="bar-chart-2" size={40} color={theme.primary} />
+            <Feather name="book-open" size={40} color={theme.primary} />
           </View>
-          <ThemedText style={styles.emptyTitle}>No Health Data Yet</ThemedText>
+          <ThemedText style={styles.emptyTitle}>No Health Story Yet</ThemedText>
           <ThemedText style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-            Add wearable readings or complete a daily check-in with ARYA to see your health trends here.
+            Add wearable readings or complete a daily check-in with ARYA to get your personalized health narrative.
           </ThemedText>
         </View>
       ) : (
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + Spacing.xl }]}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + Spacing["2xl"] }]}
           showsVerticalScrollIndicator={false}
         >
-          <Card style={styles.summaryCard}>
-            <View style={styles.summaryHeader}>
-              <ThemedText style={styles.summaryTitle}>
-                {periodConfig.label} Summary
+          {!narrativeData && !narrativeMutation.isPending ? (
+            <Card style={styles.generateCard}>
+              <View style={[styles.generateIcon, { backgroundColor: theme.primary + "12" }]}>
+                <Feather name="file-text" size={32} color={theme.primary} />
+              </View>
+              <ThemedText style={styles.generateTitle}>Your Health Story</ThemedText>
+              <ThemedText style={[styles.generateSubtitle, { color: theme.textSecondary }]}>
+                ARYA will analyze your health data from the {PERIODS.find(p => p.key === selectedPeriod)?.label.toLowerCase()} and write a personalized summary in plain language - just like a friendly doctor explaining your results.
               </ThemedText>
-              <View style={[styles.readingsBadge, { backgroundColor: theme.primary + "15" }]}>
-                <ThemedText style={[styles.readingsText, { color: theme.primary }]}>
-                  {current.readingCount} readings
+              <View style={[styles.dataPreview, { backgroundColor: theme.backgroundDefault }]}>
+                <Feather name="database" size={14} color={theme.textSecondary} />
+                <ThemedText style={[styles.dataPreviewText, { color: theme.textSecondary }]}>
+                  {readings.length} health readings available
                 </ThemedText>
               </View>
-            </View>
+              <Pressable
+                style={[styles.generateButton, { backgroundColor: theme.primary }]}
+                onPress={handleGenerateNarrative}
+              >
+                <Feather name="zap" size={18} color="#FFFFFF" />
+                <ThemedText style={styles.generateButtonText}>Generate My Health Story</ThemedText>
+              </Pressable>
+            </Card>
+          ) : null}
 
-            {current.readingCount === 0 ? (
-              <ThemedText style={[styles.noDataText, { color: theme.textSecondary }]}>
-                No readings in this period. Try a different time range.
+          {narrativeMutation.isPending ? (
+            <Card style={styles.loadingCard}>
+              <ActivityIndicator size="large" color={theme.primary} />
+              <ThemedText style={[styles.loadingText, { marginTop: Spacing.lg }]}>
+                ARYA is reading your health data...
               </ThemedText>
-            ) : (
-              <>
-                <MetricRow
-                  icon="heart"
-                  label="Avg Heart Rate"
-                  value={current.avgHeartRate}
-                  unit="bpm"
-                  color="#EF4444"
-                  trend={getTrend(current.avgHeartRate, previous.avgHeartRate)}
-                />
-                <MetricRow
-                  icon="activity"
-                  label="Total Steps"
-                  value={current.totalSteps?.toLocaleString() ?? null}
-                  unit="steps"
-                  color="#2563EB"
-                  trend={getTrend(current.totalSteps, previous.totalSteps)}
-                />
-                <MetricRow
-                  icon="moon"
-                  label="Avg Sleep"
-                  value={current.avgSleep}
-                  unit="hours"
-                  color="#6366F1"
-                  trend={getTrend(current.avgSleep, previous.avgSleep)}
-                />
-                <MetricRow
-                  icon="zap"
-                  label="Total Calories"
-                  value={current.totalCalories?.toLocaleString() ?? null}
-                  unit="kcal"
-                  color="#F59E0B"
-                  trend={getTrend(current.totalCalories, previous.totalCalories)}
-                />
-                <MetricRow
-                  icon="thermometer"
-                  label="Avg Blood Pressure"
-                  value={current.avgBpSystolic !== null && current.avgBpDiastolic !== null ? `${current.avgBpSystolic}/${current.avgBpDiastolic}` : null}
-                  unit="mmHg"
-                  color="#2563EB"
-                />
-                <MetricRow
-                  icon="droplet"
-                  label="Avg SpO2"
-                  value={current.avgSpO2 !== null ? `${current.avgSpO2}%` : null}
-                  unit=""
-                  color="#10B981"
-                  trend={getTrend(current.avgSpO2, previous.avgSpO2)}
-                />
-                <MetricRow
-                  icon="frown"
-                  label="Avg Stress"
-                  value={current.avgStress}
-                  unit="/100"
-                  color="#EF4444"
-                  trend={getTrend(current.avgStress, previous.avgStress)}
-                />
-              </>
-            )}
-          </Card>
+              <ThemedText style={[styles.loadingSubtext, { color: theme.textSecondary }]}>
+                Writing your personalized health narrative
+              </ThemedText>
+            </Card>
+          ) : null}
 
-          {dayReadings.length > 0 ? (
+          {narrativeMutation.isError ? (
+            <Card style={styles.errorCard}>
+              <Feather name="alert-triangle" size={24} color={Colors.light.danger} />
+              <ThemedText style={[styles.errorText, { color: Colors.light.danger }]}>
+                {(narrativeMutation.error as any)?.message?.includes("No health data")
+                  ? "No health data found for this time period. Try a different range."
+                  : "Could not generate your health story. Please try again."}
+              </ThemedText>
+              <Pressable
+                style={[styles.retryButton, { borderColor: theme.primary }]}
+                onPress={handleGenerateNarrative}
+              >
+                <ThemedText style={[styles.retryButtonText, { color: theme.primary }]}>Try Again</ThemedText>
+              </Pressable>
+            </Card>
+          ) : null}
+
+          {narrativeData ? (
             <>
-              <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-                DAILY BREAKDOWN
-              </ThemedText>
-              {dayReadings.map((data, index) => (
-                <Card key={index} style={styles.breakdownCard}>
-                  <View style={styles.breakdownHeader}>
-                    <ThemedText style={styles.breakdownDate}>{data.date}</ThemedText>
+              <WellnessScoreRing
+                score={narrativeData.narrative.wellnessScore.score}
+                label={narrativeData.narrative.wellnessScore.label}
+                explanation={narrativeData.narrative.wellnessScore.explanation}
+                theme={theme}
+              />
+
+              <Card style={styles.storyCard}>
+                <View style={styles.storyHeader}>
+                  <View style={[styles.storyIconWrap, { backgroundColor: theme.primary + "12" }]}>
+                    <Feather name="book-open" size={18} color={theme.primary} />
                   </View>
-                  <View style={styles.breakdownMetrics}>
-                    {data.heartRate !== null ? (
-                      <View style={styles.breakdownMetric}>
-                        <Feather name="heart" size={13} color="#EF4444" />
-                        <ThemedText style={styles.breakdownValue}>{data.heartRate}</ThemedText>
-                      </View>
-                    ) : null}
-                    {data.steps !== null ? (
-                      <View style={styles.breakdownMetric}>
-                        <Feather name="activity" size={13} color="#2563EB" />
-                        <ThemedText style={styles.breakdownValue}>{data.steps.toLocaleString()}</ThemedText>
-                      </View>
-                    ) : null}
-                    {data.sleep !== null ? (
-                      <View style={styles.breakdownMetric}>
-                        <Feather name="moon" size={13} color="#6366F1" />
-                        <ThemedText style={styles.breakdownValue}>{data.sleep}h</ThemedText>
-                      </View>
-                    ) : null}
-                    {data.calories !== null ? (
-                      <View style={styles.breakdownMetric}>
-                        <Feather name="zap" size={13} color="#F59E0B" />
-                        <ThemedText style={styles.breakdownValue}>{data.calories}</ThemedText>
-                      </View>
-                    ) : null}
+                  <View>
+                    <ThemedText style={styles.storyTitle}>Your Health Story</ThemedText>
+                    <ThemedText style={[styles.storyPeriod, { color: theme.textSecondary }]}>
+                      {narrativeData.periodLabel} - {narrativeData.readingCount} readings
+                    </ThemedText>
                   </View>
-                </Card>
-              ))}
+                </View>
+                <ThemedText style={[styles.storyText, { color: theme.text }]}>
+                  {narrativeData.narrative.healthStory}
+                </ThemedText>
+              </Card>
+
+              {narrativeData.narrative.keyInsights.length > 0 ? (
+                <>
+                  <ThemedText style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+                    KEY INSIGHTS
+                  </ThemedText>
+                  <Card style={styles.insightsCard}>
+                    {narrativeData.narrative.keyInsights.map((insight, i) => (
+                      <InsightCard key={i} item={insight} theme={theme} />
+                    ))}
+                  </Card>
+                </>
+              ) : null}
+
+              {narrativeData.narrative.areasToWatch.length > 0 ? (
+                <>
+                  <ThemedText style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+                    AREAS TO WATCH
+                  </ThemedText>
+                  <Card style={styles.watchCard}>
+                    {narrativeData.narrative.areasToWatch.map((item, i) => (
+                      <WatchCard key={i} item={item} theme={theme} />
+                    ))}
+                  </Card>
+                </>
+              ) : null}
+
+              {narrativeData.narrative.actionPlan.length > 0 ? (
+                <>
+                  <ThemedText style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+                    YOUR ACTION PLAN
+                  </ThemedText>
+                  <Card style={styles.actionCard}>
+                    {narrativeData.narrative.actionPlan.map((action, i) => (
+                      <View key={i} style={[styles.actionItem, i < narrativeData.narrative.actionPlan.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.borderLight }]}>
+                        <View style={[styles.actionNumber, { backgroundColor: theme.primary + "15" }]}>
+                          <ThemedText style={[styles.actionNumberText, { color: theme.primary }]}>{i + 1}</ThemedText>
+                        </View>
+                        <ThemedText style={[styles.actionText, { color: theme.text }]}>{action}</ThemedText>
+                      </View>
+                    ))}
+                  </Card>
+                </>
+              ) : null}
+
+              <Pressable
+                style={[styles.regenerateButton, { borderColor: theme.borderLight }]}
+                onPress={handleGenerateNarrative}
+              >
+                <Feather name="refresh-cw" size={16} color={theme.textSecondary} />
+                <ThemedText style={[styles.regenerateText, { color: theme.textSecondary }]}>
+                  Regenerate Story
+                </ThemedText>
+              </Pressable>
             </>
           ) : null}
         </ScrollView>
@@ -433,102 +439,254 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: Spacing.lg,
   },
-  summaryCard: {
-    padding: Spacing.lg,
-    marginBottom: Spacing.xl,
+  generateCard: {
+    padding: Spacing.xl,
+    alignItems: "center",
   },
-  summaryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  generateIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
     alignItems: "center",
     marginBottom: Spacing.lg,
   },
-  summaryTitle: {
+  generateTitle: {
     ...Typography.h4,
+    fontWeight: "600",
+    marginBottom: Spacing.sm,
+    textAlign: "center",
   },
-  readingsBadge: {
+  generateSubtitle: {
+    ...Typography.body,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: Spacing.lg,
+  },
+  dataPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.xl,
+  },
+  dataPreviewText: {
+    ...Typography.small,
+  },
+  generateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing["2xl"],
+    borderRadius: BorderRadius.md,
+    width: "100%",
+  },
+  generateButtonText: {
+    ...Typography.body,
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  loadingCard: {
+    padding: Spacing["2xl"],
+    alignItems: "center",
+  },
+  loadingText: {
+    ...Typography.body,
+    fontWeight: "600",
+  },
+  loadingSubtext: {
+    ...Typography.small,
+    marginTop: Spacing.xs,
+  },
+  errorCard: {
+    padding: Spacing.xl,
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  errorText: {
+    ...Typography.body,
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  retryButtonText: {
+    ...Typography.body,
+    fontWeight: "600",
+  },
+  scoreCard: {
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  scoreContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.lg,
+  },
+  scoreRing: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scoreNumber: {
+    fontSize: 28,
+    fontWeight: "700",
+  },
+  scoreOutOf: {
+    ...Typography.caption,
+    marginTop: -4,
+  },
+  scoreInfo: {
+    flex: 1,
+  },
+  scoreLabelBadge: {
+    alignSelf: "flex-start",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
+    marginBottom: Spacing.sm,
   },
-  readingsText: {
-    ...Typography.caption,
-    fontWeight: "600",
+  scoreLabelText: {
+    ...Typography.small,
+    fontWeight: "700",
   },
-  noDataText: {
+  scoreExplanation: {
     ...Typography.body,
-    textAlign: "center",
-    paddingVertical: Spacing.xl,
+    lineHeight: 20,
   },
-  metricRow: {
+  storyCard: {
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  storyHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
   },
-  metricIcon: {
+  storyIconWrap: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: Spacing.md,
   },
-  metricInfo: {
-    flex: 1,
-  },
-  metricLabel: {
-    ...Typography.small,
-  },
-  metricValueRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-  },
-  metricValue: {
+  storyTitle: {
     ...Typography.body,
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  metricUnit: {
+  storyPeriod: {
     ...Typography.caption,
-    marginLeft: Spacing.xs,
   },
-  trendIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
+  storyText: {
+    ...Typography.body,
+    lineHeight: 24,
   },
-  sectionTitle: {
+  sectionLabel: {
     ...Typography.caption,
     fontWeight: "700",
     letterSpacing: 0.8,
     marginBottom: Spacing.md,
     marginLeft: Spacing.xs,
   },
-  breakdownCard: {
+  insightsCard: {
     padding: Spacing.md,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xl,
   },
-  breakdownHeader: {
-    marginBottom: Spacing.sm,
+  insightItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
   },
-  breakdownDate: {
+  insightIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  insightText: {
+    flex: 1,
+  },
+  insightTitle: {
     ...Typography.body,
     fontWeight: "600",
+    marginBottom: 2,
   },
-  breakdownMetrics: {
+  insightDesc: {
+    ...Typography.small,
+    lineHeight: 20,
+  },
+  watchCard: {
+    padding: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  watchItem: {
+    borderLeftWidth: 3,
+    paddingLeft: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  watchTitle: {
+    ...Typography.body,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  watchDesc: {
+    ...Typography.small,
+    lineHeight: 20,
+  },
+  actionCard: {
+    padding: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  actionItem: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.lg,
+    alignItems: "flex-start",
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
   },
-  breakdownMetric: {
+  actionNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  actionNumberText: {
+    ...Typography.small,
+    fontWeight: "700",
+  },
+  actionText: {
+    ...Typography.body,
+    flex: 1,
+    lineHeight: 22,
+  },
+  regenerateButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: Spacing.lg,
   },
-  breakdownValue: {
+  regenerateText: {
     ...Typography.small,
-    fontWeight: "500",
+    fontWeight: "600",
   },
 });
